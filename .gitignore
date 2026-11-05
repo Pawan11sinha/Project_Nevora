@@ -17,6 +17,9 @@ out/
 .dev.vars
 .dev.vars.*
 
+# Business plan with personal and supplier details: stays on the owner's computer
+novero_chat.md
+
 # Local files
 *.log
 .DS_Store

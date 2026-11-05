@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { authCookieOptions } from "../src/lib/auth-cookies.ts";
+import { isDecodablePath } from "../src/lib/url-guard.ts";
 import { loginDestination, loginSchema } from "../src/lib/validation.ts";
 
 test("login accepts valid credentials", () => {
@@ -27,6 +28,22 @@ test("login can only redirect to known pages", () => {
   assert.equal(loginDestination("https://evil.example"), "/account");
   assert.equal(loginDestination("//evil.example"), "/account");
   assert.equal(loginDestination(null), "/account");
+});
+
+test("malformed paths are caught and valid encoded paths pass", () => {
+  for (const bad of ["/c/%E0%A4%A", "/p/%FF", "/c/%ZZ", "/%"]) {
+    assert.equal(isDecodablePath(bad), false, bad);
+  }
+  for (const good of ["/", "/c/earrings", "/c/ear%72ings", "/p/sample%2D1", "/a%20b", "/%E0%A4%A4"]) {
+    assert.equal(isDecodablePath(good), true, good);
+  }
+});
+
+test("pages don't ask for ISR refresh while KV is off", () => {
+  for (const page of ["../src/app/c/[slug]/page.tsx", "../src/app/p/[slug]/page.tsx"]) {
+    const source = readFileSync(new URL(page, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /export const revalidate/);
+  }
 });
 
 test("session cookies are protected, with no short lifetime", () => {

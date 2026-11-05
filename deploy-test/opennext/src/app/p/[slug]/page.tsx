@@ -3,8 +3,7 @@ import { AddButton } from "@/components/AddButton";
 import { ProductImage } from "@/components/ProductImage";
 import { formatPrice, PRODUCTS } from "@/lib/sample-data";
 
-// Test 3: a cached product page, generated on first visit.
-export const revalidate = 300;
+// Test 3: product pages cached at build time. No ISR while KV is off.
 
 export function generateStaticParams() {
   return PRODUCTS.slice(0, 8).map((p) => ({ slug: p.slug }));

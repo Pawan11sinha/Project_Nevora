@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/ProductGrid";
 import { CATEGORIES, PRODUCTS } from "@/lib/sample-data";
 
-// Test 2: cached category pages that revalidate on a timer.
-export const revalidate = 300;
+// Test 2: category pages cached at build time. No ISR while KV is off, because the
+// read-only cache can't store a refreshed page.
 
 export function generateStaticParams() {
   return CATEGORIES.map((c) => ({ slug: c.slug }));

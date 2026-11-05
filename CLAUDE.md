@@ -8,7 +8,7 @@ Read before working on a feature:
 - `docs/DATABASE_SCHEMA.md`: tables, statuses and order and payment rules
 - `docs/SECURITY_PLAN.md`: access rules, risks and go-live checks
 - `docs/IMPLEMENTATION_ROADMAP.md`: phases, acceptance criteria and open decisions
-- `novero_chat.md`: the original business plan. Where it conflicts with `docs/`, `docs/` wins.
+- `novero_chat.md`: the original business plan, kept on the owner's computer only and never committed, because it holds personal and supplier details. Where it conflicts with `docs/`, `docs/` wins.
 
 ## Stack
 

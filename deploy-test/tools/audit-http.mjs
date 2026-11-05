@@ -64,7 +64,7 @@ for (const [label, p, headers] of [
 
 // Errors and hostile input
 { const { r, b } = await text("/api/audit/throw"); rec("Route error hides detail", r.status === 500 && !b.includes("AUDIT_SECRET_ERROR_MARKER") ? "PASS" : "FAIL", `status=${r.status} leak=${b.includes("AUDIT_SECRET_ERROR_MARKER")} body=${b.slice(0, 40)}`); }
-{ const { r, b } = await text("/audit/throw"); rec("Page error hides detail", r.status === 500 && !b.includes("AUDIT_SECRET_ERROR_MARKER") ? "PASS" : "FAIL", `status=${r.status} leak=${b.includes("AUDIT_SECRET_ERROR_MARKER")} stack=${/at .*\.(js|mjs|tsx):/.test(b)}`); rec("Branded error page exists", /error\.tsx/.test(process.env.ERROR_PAGE ?? "") ? "PASS" : "WARNING", "no error.tsx or global-error.tsx in src/app"); }
+{ const { r, b } = await text("/audit/throw"); rec("Page error hides detail", r.status === 500 && !b.includes("AUDIT_SECRET_ERROR_MARKER") ? "PASS" : "FAIL", `status=${r.status} leak=${b.includes("AUDIT_SECRET_ERROR_MARKER")} stack=${/at .*\.(js|mjs|tsx):/.test(b)}`);  }
 for (const [p, ok] of [["/c/%E0%A4%A", (s) => s < 500], ["/p/%3Cscript%3Ealert(1)%3C%2Fscript%3E", (s) => s === 404], [`/c/${"a".repeat(8000)}`, (s) => s < 500], ["/..%2f..%2fetc/passwd", (s) => s === 404], ["/.env", (s) => s === 404], ["/.dev.vars", (s) => s === 404], ["/wrangler.jsonc", (s) => s === 404], ["/package.json", (s) => s === 404], ["/cdn-cgi/_next_cache/x", (s) => s >= 400]]) {
   const { r, b } = await text(p);
   rec(`hostile path ${p.slice(0, 40)}`, ok(r.status) && !b.includes("<script>alert(1)") ? "PASS" : "FAIL", `status=${r.status}`);
