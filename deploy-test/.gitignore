@@ -1,0 +1,10 @@
+.env.test
+.dev.vars
+node_modules/
+.next/
+.open-next/
+.wrangler/
+.vinext/
+.cloudflare/
+dist/
+*.log

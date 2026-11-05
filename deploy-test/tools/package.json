@@ -1,0 +1,8 @@
+{
+  "name": "nevora-deploy-test-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1"
+  }
+}
