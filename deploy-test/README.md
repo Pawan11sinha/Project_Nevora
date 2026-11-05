@@ -81,6 +81,10 @@ This is the only way to test a real confirmation email until Resend and a domain
 - The test script signs up once, and checks that login is blocked until you click the link in the email.
 - Built-in email sends about 2 messages an hour, and only to project team members.
 
+## Stage 4 load function (not yet run)
+
+`deploy-test/supabase-load-test.sql` adds a function that runs the real purchase, then undoes it. So a load test leaves no orders and no stock change. PostgreSQL doesn't reclaim sequence values when work is rolled back, so **later order numbers will skip ahead by about one per call**. This is cosmetic: order counts and existing orders don't change, and the rollback doesn't reset it. Each call also leaves dead row versions, which Postgres cleans up automatically. Remove it with `deploy-test/supabase-load-test-rollback.sql`.
+
 ## Undoing the setup
 
 Run `deploy-test/supabase-test-rollback.sql` in the SQL Editor of the same project. It removes all `deploy_test_` objects and their data, with the trigger first. Test users remain until you delete them under **Authentication, Users**, or use the commented lines in that file for the `nevora-test-` users. A user from the optional signup must be deleted in the dashboard. No project settings need restoring. Deleting the whole test project also removes everything.
