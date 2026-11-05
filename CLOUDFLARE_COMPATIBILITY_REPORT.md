@@ -1,19 +1,19 @@
 # NÉVORA Cloudflare Workers compatibility report
 
-Updated 5 November 2026, after the first real deployment. Audited: the sample test app in `deploy-test/opennext`, and the plans in `docs/`.
+Updated 5 November 2026, after two redeployments and a CPU limit probe. Audited: the sample test app in `deploy-test/opennext`, and the plans in `docs/`.
 
-Live test Worker: `https://nevora-deploy-test-opennext.<account-subdomain>.workers.dev`, version `fbc09fab`. It holds sample data only, with no secrets, KV, R2, Supabase or payment connection, on the Workers Free plan.
+Live test Worker: `https://nevora-deploy-test-opennext.<account-subdomain>.workers.dev`, version `ca2b0b7a`. It holds sample data only, with no secrets, KV, R2, Supabase or payment connection, on the Workers Free plan. The temporary CPU probe route and its secret have been removed.
 
 ## 1. Verdict
 
-**OpenNext on Workers works in production for the sample app. Workers Free is proven for cached pages, but not for pages rendered on each request.**
+**OpenNext on Workers works in production for the sample app, and cached pages are comfortably within the Free plan. The 10 ms CPU limit is real and enforced, and it remains an unresolved blocker for dynamic ecommerce routes. Production launch is not recommended.**
 
-- Every functional check passed on Cloudflare's network, with no unexpected responses in the requests whose status was recorded.
-- Fully cached pages used about 2 ms of CPU, well inside the 10 ms limit.
-- **Rendered pages used about 17 to 18 ms at p50, over the documented 10 ms limit on every request, yet produced no errors.** That's useful, but it isn't a guarantee. See section 3.
-- Real login, database, checkout and logged-in pages are still untested, because Supabase isn't connected and the store doesn't exist yet.
+- **The limit is hard.** A deliberate CPU test got requests killed with `503` and `exceeded resource limits`, almost always at exactly 10 ms of CPU.
+- **It isn't a simple cut-off.** Many requests above 10 ms still succeed, so a temporary allowance seems to exist. It can run out, and Cloudflare's docs reviewed here don't explain it.
+- **Real rendered pages haven't been killed so far:** they use about 13 ms at p50, with no kills in any recorded run, including 1,600 sustained requests. **The synthetic test at a similar CPU level failed about half the time.** That conflict is unexplained, so the clean result can't be treated as safe.
+- **Real database-backed pages are untested.** They're the next test, and they decide this question.
 
-**No paid upgrade is recommended at this point.**
+**No paid upgrade is recommended yet.** See section 3 for the evidence and the decision rule.
 
 ## 2. How to read this report
 
@@ -98,13 +98,80 @@ That's about 3.6% of the free 100,000 a day. **This count comes from my scripts,
 
 Tail drops events at higher rates, which is why the first two runs captured so little. Only the clean run gives per-request statistics.
 
-### What this means
+### What the first run showed
 
-1. **Cached pages are comfortable.** `/` and `/login` stayed at 5 ms or less.
-2. **Rendered pages are over the documented limit.** This is real production data and agrees with Cloudflare's guidance that server rendering typically uses 10 to 20 ms.
-3. **No `1102` errors appeared, even at 279 ms.** So in this test the limit wasn't enforced per request. **I couldn't find a Cloudflare statement explaining this, so don't rely on it.** Enforcement could depend on factors this short test didn't reach, and could change.
-4. **Occasional spikes of 40 to 60 ms** on otherwise light paths, such as `/account` and `/api/health`, are probably a new Worker instance loading code. This wasn't proven.
-5. **`/c/earrings` and `/p/sample-1` use about 7 ms, against 2 ms for `/`.** Each view tries and fails to revalidate an expired page. Removing `revalidate` removed the logged errors in a local copy. Local CPU didn't show the difference clearly, so the CPU saving still needs a live test.
+The rendered pages went over 10 ms with no errors, and category and product pages used about 7 ms because each view failed to revalidate an expired page. The later sections supersede this first run's conclusions.
+
+### Second run: after the fixes
+
+Version `10cca03e`: `revalidate` removed from cached pages, and the malformed-URL guard added. Same method: 360 requests, one at a time, all captured by tail, with 0 unexpected responses.
+
+| Path | CPU p50 before → after | CPU p95 before → after | CPU max before → after | Over 10 ms before → after | Latency p50 before → after |
+|---|---|---|---|---|---|
+| `/` | 2 → 2 | 3 → 3 | 5 → 3 | 0% → 0% | 27 → 29 |
+| `/login` | 2 → 1 | 3 → 2 | 3 → 8 | 0% → 0% | 27 → 29 |
+| `/account` | 2 → 1 | 54 → 3 | 57 → 8 | 33% → 0% | 20 → 19 |
+| `/api/health` | 5 → 3 | 44 → 5 | 46 → 6 | 23% → 0% | 23 → 22 |
+| `/no-such` | 5 → 3 | 10 → 4 | 11 → 5 | 3% → 0% | 30 → 29 |
+| `/p/sample-1` | **7 → 1** | 12 → 3 | 13 → 4 | 8% → 0% | 36 → 28 |
+| `/c/earrings` | **7 → 1** | 13 → 3 | 14 → 3 | 15% → 0% | 38 → 28 |
+| `/ssr` | 17 → 13 | 28 → 24 | 28 → 24 | 100% → 83% | 40 → 37 |
+| `/p/sample-40` | 18 → 13 | 29 → 23 | 29 → 24 | 100% → 90% | 41 → 38 |
+| **All paths** | **6 → 2** | **33 → 17** | **57 → 24** | **31% → 19%** | |
+
+- **Caused by the fix:** category and product pages. Their failing revalidation is gone, and error logs fell from 120 to 40 per 360 requests. The remaining 40 are `/p/sample-40` trying to write to the read-only cache.
+- **Not attributable to the fix:** the smaller changes on paths the fix doesn't touch, such as the `/account` and `/api/health` spikes and the `/ssr` figures. Those are probably normal variation between runs, including how many Worker instances started. Two runs can't separate them.
+
+### CPU limit probe
+
+Temporary route, since removed, running a plain arithmetic loop for a chosen number of iterations. Version `60581661`, with one temporary secret, since deleted.
+
+**One request per second, all captured by tail:**
+
+| Iterations | CPU p50 of successes | Requests | Killed | Kill rate | CPU when killed |
+|---|---|---|---|---|---|
+| 1 million | 7 ms | 40 | 0 | 0% | |
+| 2 million | 11 ms | 40 | 0 | 0% | |
+| 3 million | 15 ms | 40 | 19 | **48%** | 10 to 12 ms |
+| 4 million | 18 ms | 40 | 31 | **78%** | 10 ms |
+| 6 million | 25 ms | 40 | 29 | **73%** | 10 ms |
+| 8 million | 34 ms | 40 | 29 | **73%** | 10 ms |
+
+**Sustained, 5 at a time:**
+
+| Iterations | Requests | Limit errors | Rate |
+|---|---|---|---|
+| 1 million | 300 | 1 | 0.3% |
+| 2 million | 300 | 0 | 0% |
+| 3 million | 300 | 36 | 12% |
+| 4 million | 300 | 78 | 26% |
+| 6 million | 300 | 49 | 16% |
+| 8 million | 300 | 46 | 15% |
+
+In the first, coarser probe, 50 million iterations failed 20 of 20 when stepped up one at a time, while other requests succeeded at up to 349 ms of CPU. Tail reported those failures as outcome `exceededCpu`.
+
+### Is the 10 ms limit a hard production blocker for dynamic routes?
+
+**Treat it as a blocker until real routes pass. It's not resolved.**
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Is the limit enforced? | **Yes** | Requests killed at 10 ms, with `503` and `exceededCpu` |
+| Can a request exceed 10 ms? | Sometimes | Successes up to 349 ms, but unpredictable |
+| Do cached pages risk it? | Very unlikely | p95 of 3 ms |
+| Do current rendered pages get killed? | Not so far | 13 ms p50, 0 kills in 40, and 0 limit errors in 1,600 sustained in the earlier version |
+| Can that be relied on? | **No** | Similar CPU in the synthetic test failed 48% of the time |
+| Why do the two differ? | **Unknown** | The loop is one unbroken stretch of CPU, while rendering yields repeatedly. That's only a hypothesis, and I found no Cloudflare statement of how the allowance works. |
+| What about real checkout and account pages? | **Untested** | They add auth, database calls and more rendering |
+
+A kill during checkout would show the customer an error. The order function's transaction protects stock, but the customer wouldn't know whether the order was placed.
+
+**Proposed decision rule, for your approval:**
+
+- **Pass on Free:** 0 `exceededCpu` outcomes across at least 1,000 requests per critical route, both paced and sustained, on real pages using the real database: logged-in `/account`, `/admin`, checkout action and order page.
+- **Fail:** any `exceededCpu` on a critical route. Then the options are reducing that route's CPU and retesting, or Workers Paid at $5 a month, with a default CPU limit of 30 seconds per request, **only with your approval**.
+
+Even a pass only covers the conditions tested, so Workers logs would need watching after launch.
 
 ## 4. Your three investigations
 
@@ -128,28 +195,25 @@ Tail drops events at higher rates, which is why the first two runs captured so l
 
 ### 4.3 Why malformed URLs return 500
 
-**This comes from Next.js. It's safe but incorrect, and it can be handled cleanly.**
+**The cause was in Next.js, and it's now fixed on the live Worker.**
 
-- Live, `/c/%E0%A4%A` returns a plain 21-byte `Internal Server Error`, with no stack trace or file path.
-- Under `next start`, `/c/%E0%A4%A`, `/p/%FF` and `/c/%ZZ` also return 500. Non-dynamic paths such as `/%E0%A4%A` return 404, so it affects dynamic routes.
+- It returned a plain 21-byte `Internal Server Error`, with no stack trace or file path. Under `next start`, dynamic routes behaved the same. Non-dynamic paths returned 404.
 - `route-matcher.js` raises `DecodeError` for these, and `base-server.js` converts that error to 400 in three places. These requests evidently reach some other path. **I didn't pinpoint the exact line.**
-- Tested fix: a small wrapper around the OpenNext Worker, using OpenNext's documented custom Worker approach, checks only paths containing `%`. Locally, malformed paths returned 400. Valid encoded paths such as `/c/ear%72ings` still returned 200, and all 11 browser checks passed.
-- **Recommendation: apply it with the next live update, then remeasure.** It's low risk, but each 500 otherwise adds noise to error monitoring.
+- **Fix deployed:** `custom-worker.ts` wraps the OpenNext Worker, using OpenNext's documented approach, and checks only paths containing `%`. Live, `/c/%E0%A4%A` and `/p/%FF` now return 400, and `/c/ear%72ings` still returns 200.
 
 ## 5. Results by area
 
-Totals for the current code, on a throwaway copy with test-only routes added:
+Totals for the current code. Local runs use a throwaway copy with test-only routes added.
 
 | Run | Level | PASS | FAIL | WARNING | NOT TESTED |
 |---|---|---|---|---|---|
-| HTTP checks | Local and Mock | 97 | 1 | 4 | 3 |
-| Browser and mock login | Mock | 19 | 0 | 1 | 0 |
-| Basic browser checks | Local | 11 | 0 | 0 | 0 |
-| Unit tests | Build | 7 | 0 | 0 | 0 |
 | **Smoke checks on the live Worker** | **Production** | **15** | **0** | **0** | **0** |
 | **Browser checks on the live Worker** | **Production** | **11** | **0** | **0** | **0** |
+| HTTP checks | Local and Mock | 99 | 0 | 2 | 3 |
+| Browser and mock login | Mock | 19 | 0 | 1 | 0 |
+| Unit tests | Build | 9 | 0 | 0 | 0 |
 
-The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnings are artifacts: a stale hard-coded check for the error pages, which now exist, and a test-only route.
+The HTTP warnings are `/BUILD_ID` being public and a test-only route with no cache header.
 
 ### 5.1 Next.js and OpenNext
 
@@ -175,7 +239,7 @@ The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnin
 | Static, SSG, SSR and on-demand pages | PASS | Production | All 200, with expected content |
 | 404 handling | PASS | Production | `/no-such`, `/c/nope` |
 | Client navigation | PASS | Production | Browser check |
-| Malformed URL | WARNING | Production | 500, safe body. See 4.3. |
+| Malformed URL | PASS | Production | Now 400. See 4.3. |
 
 ### 5.4 Server Actions and API methods
 
@@ -229,9 +293,9 @@ The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnin
 |---|---|---|---|
 | Prerendered pages served from cache | PASS | Production | `x-opennext-cache: HIT` on `/` |
 | Compressed page size | PASS | Production | `/` 3.8 KB, `/c/earrings` 3.2 KB, `/ssr` 4.5 KB |
-| **On-demand pages are never cached** | **FAIL** | **Production** | `/p/sample-40` over 10 ms on every request. The read-only cache can't store it, and logs an error each time. |
-| **ISR pages log errors** | **FAIL** | **Production** | 80 `Dummy queue is not implemented` errors in 360 requests. Pages keep working, but with `revalidate` set and no KV, they never refresh. |
-| KV caching | NOT TESTED | None | Off, as instructed. Local result earlier: 13.3 to 2.5 ms for on-demand pages. |
+| **On-demand pages are never cached** | **FAIL** | **Production** | `/p/sample-40` was over 10 ms on 90% of requests in the second run. The read-only cache can't store it, and logs an error each time. |
+| ISR errors | PASS | Production | `revalidate` removed, so the `Dummy queue` errors are gone. Pages now refresh only on redeploy. |
+| KV caching | NOT TESTED | None | Off, as instructed. Approved for a later isolated test, after Supabase. Local result earlier: 13.3 to 2.5 ms for on-demand pages. |
 
 **Without KV, updating catalogue pages needs a redeploy, or a render on each request at about 18 ms.** A decision for the next stage.
 
@@ -239,9 +303,10 @@ The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnin
 
 | Check | Status | Level | Evidence |
 |---|---|---|---|
-| Deployed on Free | PASS | Production | `Total Upload: 7513.47 KiB / gzip: 1563.71 KiB`. Accepted by Cloudflare. |
+| Deployed on Free | PASS | Production | `Total Upload: 7487.79 KiB / gzip: 1557.62 KiB`. Accepted by Cloudflare. |
 | Startup limit | PASS | Production | Deploy accepted, and the first request took 49 ms |
-| Minimum environment | PASS | Production | `wrangler secret list` returns `[]`. Bindings are only `ASSETS` and `WORKER_SELF_REFERENCE`. |
+| Minimum environment | PASS | Production | The temporary secret was deleted, and `wrangler secret list` returns `[]`. Bindings are only `ASSETS` and `WORKER_SELF_REFERENCE`. |
+| Temporary probe route removed | PASS | Production | `/api/cpu-probe` returns 404, with or without the old token |
 | Secrets in code or git | PASS | Build | Token scan found 0 files. `.env.test` confirmed ignored. |
 | `wrangler secret` values reaching code | NOT TESTED | None | None configured. Passed locally through `.dev.vars`. |
 
@@ -250,7 +315,8 @@ The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnin
 | Check | Status | Level | Evidence |
 |---|---|---|---|
 | **CPU on cached pages** | **PASS** | **Production** | p95 3 ms on `/` |
-| **CPU on rendered pages** | **WARNING** | **Production** | p50 17 to 18 ms, over the documented limit, with 0 errors |
+| **CPU limit enforced** | **FAIL for heavy work** | **Production** | Killed at about 10 ms with `exceededCpu`. See section 3. |
+| **CPU on rendered pages** | **WARNING** | **Production** | p50 13 ms, over the limit, with no kills so far |
 | Sustained load | PASS | Production | 1,600 of 1,600 returned 200 |
 | CPU with a real database | NOT TESTED | None | Needs Supabase |
 | Memory against 128 MB | NOT TESTED | None | No test route on the live Worker, and no errors seen |
@@ -277,7 +343,7 @@ The one local `FAIL` is the malformed-URL `500` in section 4.3. Two local warnin
 | Personal data in logs | WARNING | Production | Tail events include visitor IP addresses. Raw logs stayed in a temporary folder and aren't in the repo or this report. |
 | Workers Logs in the dashboard | NOT TESTED | None | Enabled, but I can't view the dashboard |
 | Error tracking and alerts | FAIL | Review | None. Cloudflare's billing alerts need a Professional plan or higher. Weekly manual check remains the plan. |
-| Git and GitHub readiness | PASS | Build | Local repo with four commits. Nothing uploaded. |
+| Git and GitHub readiness | PASS | Build | Local repo. Nothing uploaded. `novero_chat.md` removed from history. |
 | CI | NOT TESTED | Review | `.github/workflows/ci.yml` written, with no secrets and no deploy. It only runs once on GitHub. |
 | Rollback | NOT TESTED | None | Available through `wrangler rollback`, not exercised |
 
@@ -288,8 +354,8 @@ Assumes 4 pages per visit, or 200,000 page views, with about 1 Worker request pe
 | Resource | Estimated use | Free limit | Status |
 |---|---|---|---|
 | Worker requests | About 6,700 a day | 100,000 a day, resets 5:30 am IST | PASS. About 15 times an average day before Error 1027. |
-| CPU, cached pages | About 2 ms | 10 ms | PASS |
-| CPU, rendered pages | About 18 ms | 10 ms | **WARNING: over the limit, with no errors so far** |
+| CPU, cached pages | About 1 to 2 ms | 10 ms | PASS |
+| CPU, rendered pages | About 13 ms | 10 ms | **WARNING: over a limit that is enforced, with no kills so far** |
 | Static assets | Not counted | Free and unlimited | PASS |
 | KV writes, if enabled | 5,760 a day at 5-minute revalidate, about 20 to 100 with long revalidate | 1,000 a day | Use the long setting |
 | Supabase egress | Low with caching | 5 GB a month | NOT TESTED |
@@ -298,7 +364,7 @@ Assumes 4 pages per visit, or 200,000 page views, with about 1 Worker request pe
 | Stage | Monthly cost | Trigger |
 |---|---|---|
 | All free | ₹0 | Current state |
-| Workers Paid | $5, about ₹450 | Any `1102` errors in real use, or requests over documented triggers. **Your approval is needed first.** |
+| Workers Paid | $5, about ₹450 | A critical route fails the decision rule, or requests pass documented triggers. **Your approval is needed first.** |
 | Add Supabase Pro | Add $25 | Steady orders, for backups and no pausing |
 | Add Resend Pro | Add $20 | Over 70 emails a day |
 
@@ -306,11 +372,11 @@ Rupee figures assume about ₹90 to the dollar. A domain is about ₹1,000 a yea
 
 ## 7. Is Workers Free suitable?
 
-**Yes for continued testing, and likely for a catalogue that's almost entirely cached. Not yet proven for a real store.**
+**Yes for testing and for cached catalogue pages. Not established for dynamic ecommerce routes.**
 
-- **The case for it:** all requests succeeded, cached pages are far below the limit, and the requests estimate has plenty of room.
-- **The case against it:** rendered pages exceed the documented limit on every request, and account, checkout and admin pages must render on demand, with real database work on top.
-- **Plan:** stay on Free. Watch Workers logs for `1102` and Error 1027 as real traffic arrives. If `1102` appears, or the real checkout test fails, I'll bring you the results and the $5 option for approval.
+- **The case for it:** cached pages use about 1 to 2 ms, all recorded real-page requests succeeded, and the request allowance has plenty of room.
+- **The case against it:** the 10 ms limit is enforced, and account, checkout and admin pages must render on demand with database work on top.
+- **Next:** apply the decision rule in section 3 on real routes. No upgrade is recommended before that.
 
 ## 8. Can the architecture support each feature?
 
@@ -330,7 +396,7 @@ No feature below exists as store code yet.
 ## 9. Remaining production blockers
 
 1. **Supabase isn't connected:** real auth, RLS, session refresh, stock concurrency, backup and restore, and database CPU are all untested.
-2. **Rendered-page CPU is over the documented limit,** and the store's checkout and account pages will render on demand.
+2. **The 10 ms limit is enforced, and rendered pages exceed it.** Critical dynamic routes must pass the decision rule in section 3.
 3. **Catalogue updates have no answer without KV:** ISR can't refresh with the read-only cache.
 4. **The store doesn't exist yet:** expected at this stage.
 5. **Protections not built yet:** rate limiting, automated backups, and error tracking.
@@ -339,22 +405,29 @@ No feature below exists as store code yet.
 
 ## 10. Recommended next steps
 
-None of these has been applied, pending your approval.
-
-| # | Step | Why |
+| # | Step | Status |
 |---|---|---|
-| 1 | Remove `revalidate` from cached pages while KV is off, redeploy the test Worker and remeasure | Stops 80 error logs per 360 requests, and may bring those pages from 7 ms to about 2 ms |
-| 2 | Add the malformed-URL wrapper | Correct 400s, less noise |
-| 3 | Create the Supabase test project, then test real auth, RLS, stock race, `getClaims`, and CPU on database pages | The biggest remaining unknown |
-| 4 | Test KV on the test Worker, once you approve it | It's free, and decides how catalogue updates work |
-| 5 | Upload the repository to private GitHub, so CI runs | You create the repo, as below |
-| 6 | Delete the test Worker once the decisions are made, if you prefer | It's public, though marked as a test and set to `noindex` |
-
-Hiding `/BUILD_ID` is optional, and I'd skip it for now.
+| 1 | Create the Supabase test project | Waiting for you, once you've reviewed the setup |
+| 2 | Run `tools/supabase-test.mjs`, then add signup and database pages to the test app and measure real routes against the decision rule | Next |
+| 3 | Test KV in isolation: invalidation, price changes, stock updates, refresh and write limits | Approved, after Supabase |
+| 4 | Consolidated report, including the 10 ms answer | After those |
+| 5 | Push to private GitHub | Waiting for your review of the file list |
 
 ## 11. Private GitHub setup
 
-Nothing has been uploaded. The GitHub CLI isn't installed here.
+Nothing has been uploaded, and the push waits for your approval of the file list. The GitHub CLI isn't installed here.
+
+Checks done on all tracked files and full history:
+
+- `novero_chat.md` is excluded, and was removed from local history. It remains on your computer.
+- All `.env` files are ignored, except `.env.example`, which holds no values. `.env.test` is ignored.
+- No API keys, tokens or passwords found. The test token isn't in any commit.
+- No supplier phone numbers or names found, other than the generic market names "Sadar Bazaar" and "Chandni Chowk" in the roadmap.
+- The only phone-like value is the fake test number `9876543210`.
+- Your account subdomain was replaced with a placeholder in this report and in history.
+- Commits use your GitHub no-reply address, and the personal email doesn't appear.
+
+When approved:
 
 1. On https://github.com/new, create a **Private** repository named `nevora-store`, with no README, licence or `.gitignore`.
 2. Run:
@@ -365,7 +438,7 @@ git remote add origin git@github.com:<your-username>/nevora-store.git
 git push -u origin main
 ```
 
-Use the HTTPS address GitHub shows you if SSH isn't set up. **`novero_chat.md` is in the repo** and holds your name, business plan and supplier phone numbers. That's fine for a private repo, but remove it first if the repo could ever become public.
+Use the HTTPS address GitHub shows you if SSH isn't set up.
 
 ## 12. How to rerun
 
@@ -389,7 +462,7 @@ node tools/measure-paced.mjs $B 40 /tmp/client.json
 node tools/report-live.mjs /tmp/tail.log /tmp/client.json
 ```
 
-`tools/audit-*.mjs`, `tools/mock-supabase.mjs` and `audit-overlay/` run only against a local throwaway copy. The overlay adds test-only routes, and must never be copied into the store.
+`tools/audit-*.mjs`, `tools/cpu-probe*.mjs`, `tools/mock-supabase.mjs` and `audit-overlay/` run only against a local throwaway copy. The overlay adds test-only routes, including the CPU probe, and must never be copied into the store.
 
 ## 13. Limits of this evidence
 
@@ -397,4 +470,6 @@ node tools/report-live.mjs /tmp/tail.log /tmp/client.json
 - Tail reports whole milliseconds, and captures only some events at higher rates.
 - Cold starts weren't isolated. The spikes are only probably cold starts.
 - Requests in the stress run overlapped, as explained in section 3.
-- The live Worker wasn't changed during measurement. The fixes for `revalidate`, malformed URLs and `/BUILD_ID` were tested only in a local copy.
+- Each measured run used one fixed version. The probe route ran only in version `60581661`, and was removed afterwards.
+- The probe uses synthetic CPU, which may not behave like real rendering.
+- About 6,800 test requests in total today, across all runs, by my scripts' count.

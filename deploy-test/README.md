@@ -25,32 +25,35 @@ npx wrangler whoami
 
 ### 2. Supabase test project
 
-1. Sign up at https://supabase.com/dashboard, and create a Free organisation.
-2. Create a project named `nevora-deploy-test`, with region **South Asia (Mumbai)** if offered. If Mumbai isn't offered, note that and choose the closest region.
+This is a separate Free project for testing only. Never put real customer information in it.
+
+1. Sign up at https://supabase.com/dashboard, and create a Free organisation. **If it asks for a card or a paid plan, stop.**
+2. Create a project named `nevora-deploy-test`, with region **South Asia (Mumbai)** if offered. If not, note that and choose the closest region.
 3. Save the database password in a password manager. Don't paste it into a chat, or into any file here.
-4. Open **SQL Editor**, paste in all of `deploy-test/supabase-test.sql`, and press **Run**.
-5. Open **Authentication, Users, Add user, Create new user**, and make two test users with "Auto Confirm User" ticked:
-   - `test-customer@example.com`
-   - `test-admin@example.com`
-6. In the SQL Editor, make the second one an admin:
+4. Turn off email confirmation for this test project under **Authentication, Sign In / Providers, Email, Confirm email**. Supabase's built-in email only reaches project team members, so real email verification waits for Resend and a domain. **Don't copy this setting to the real store.**
+5. Open **SQL Editor**, paste in all of `deploy-test/supabase-test.sql`, and press **Run**.
+6. Open **Authentication, Users, Add user, Create new user**, with "Auto Confirm User" ticked. Use the email `nevora-test-admin@example.com` and a new throwaway password that you don't use anywhere else.
+7. In the SQL Editor, make that user an admin:
 
 ```sql
-insert into public.deploy_test_admins (user_id)
-select id from auth.users where email = 'test-admin@example.com';
+update public.deploy_test_profiles
+set role = 'admin'
+where id = (select id from auth.users where email = 'nevora-test-admin@example.com');
 ```
 
-### 3. Add the two values
+### 3. Add the values
 
-Open `deploy-test/.env.test` and fill in the two blank lines, from the project's **Connect** panel or **Settings, API Keys**:
+Open `deploy-test/.env.test` and fill in these lines. Don't paste the values into chat.
 
-- `SUPABASE_URL`: the Project URL
+- `SUPABASE_URL`: the Project URL, from the **Connect** panel or **Settings, API Keys**
 - `SUPABASE_PUBLISHABLE_KEY`: the **publishable** key. Never use the secret or `service_role` key here.
+- `TEST_ADMIN_EMAIL=nevora-test-admin@example.com`
+- `TEST_ADMIN_PASSWORD=` the throwaway password from step 6
 
-Leave `DEPLOY_TEST_TOKEN` as it is. Don't paste these values into chat.
+Leave `DEPLOY_TEST_TOKEN` as it is.
 
 ### Not needed yet
 
-- **GitHub:** needed from Phase 1b, for the store's code and backup job.
 - **Resend and the domain:** needed for real email later. Not part of this test.
 - **R2:** its signup may need a card, so that test waits for your approval.
 
