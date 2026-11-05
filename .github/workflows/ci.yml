@@ -1,0 +1,29 @@
+# Checks only. This workflow has no secrets and never deploys.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy-test/opennext
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: deploy-test/opennext/.nvmrc
+          cache: npm
+          cache-dependency-path: deploy-test/opennext/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npx opennextjs-cloudflare build

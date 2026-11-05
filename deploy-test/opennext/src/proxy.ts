@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "@/lib/auth-cookies";
 
-// Test 8: session checks run only on protected paths, never on public pages.
+// Refreshes sessions and redirects on protected paths only, never on public pages.
+//
+// Kept as proxy.ts rather than middleware.ts because Next.js 16 deprecates middleware.ts.
+// OpenNext warns that Node.js proxy support is experimental, so this must never be the
+// only protection: pages and actions check the session and role themselves.
 export const config = { matcher: ["/admin/:path*", "/account/:path*"] };
 
 export async function proxy(request: NextRequest) {
@@ -16,12 +21,15 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, key, {
+    cookieOptions: authCookieOptions,
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll: (items) => {
+      setAll: (items, headers) => {
         items.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        // Supabase sends cache headers so a refreshed token can never be cached.
+        Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },
   });

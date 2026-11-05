@@ -2,16 +2,23 @@
 
 import { redirect } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import { loginDestination, loginSchema } from "@/lib/validation";
+
+const LOGIN_FAILED = { message: "Login failed" };
 
 export async function signIn(_prev: { message: string }, form: FormData) {
   const supabase = await getSupabase();
-  if (!supabase) return { message: "Supabase isn't configured" };
-  const { error } = await supabase.auth.signInWithPassword({
-    email: String(form.get("email")),
-    password: String(form.get("password")),
+  if (!supabase) return { message: "Login isn't available" };
+
+  const credentials = loginSchema.safeParse({
+    email: form.get("email"),
+    password: form.get("password"),
   });
-  if (error) return { message: "Login failed" };
-  redirect(String(form.get("next")) === "/admin" ? "/admin" : "/account");
+  if (!credentials.success) return LOGIN_FAILED;
+
+  const { error } = await supabase.auth.signInWithPassword(credentials.data);
+  if (error) return LOGIN_FAILED;
+  redirect(loginDestination(form.get("next")));
 }
 
 export async function signOut() {

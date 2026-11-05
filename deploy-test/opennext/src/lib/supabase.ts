@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { authCookieOptions } from "./auth-cookies";
 
 // Values come from server environment variables. Nothing here reaches the browser.
 export const supabaseConfig = () => ({
@@ -13,6 +14,7 @@ export async function getSupabase() {
   if (!url || !key) return null;
   const store = await cookies();
   return createServerClient(url, key, {
+    cookieOptions: authCookieOptions,
     cookies: {
       getAll: () => store.getAll(),
       setAll: (items) => {
