@@ -7,6 +7,9 @@ export async function signUp(_prev: { message: string }, form: FormData) {
   const details = signupSchema.safeParse({ email: form.get("email"), password: form.get("password") });
   if (!details.success) return { message: "Check your email and password" };
 
+  // Off unless explicitly enabled, so a test deployment can't create users or send email.
+  if (process.env.SIGNUP_ENABLED !== "1") return { message: "Signup isn't available" };
+
   const supabase = await getSupabase();
   if (!supabase) return { message: "Signup isn't available" };
   // No metadata is sent. The same message appears whether or not the address already has an account.

@@ -28,7 +28,7 @@ for (const c of checks) {
   for (let i = 0; i < repeat; i++) {
     const start = performance.now();
     try {
-      const res = await fetch(base + c.path, { method: c.method ?? "GET", redirect: "manual" });
+      const res = await fetch(base + c.path, { method: c.method ?? "GET", redirect: "manual", headers: process.env.GATE_TOKEN ? { "x-test-gate-token": process.env.GATE_TOKEN } : {} });
       const body = await res.text();
       times.push(performance.now() - start);
       if (res.status !== c.status) problems.add(`status ${res.status}, expected ${c.status}`);

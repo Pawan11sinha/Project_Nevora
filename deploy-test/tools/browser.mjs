@@ -5,7 +5,10 @@ import { chromium } from "playwright-core";
 
 const base = (process.argv[2] ?? "http://localhost:8787").replace(/\/$/, "");
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const page = await browser.newPage({ viewport: { width: 360, height: 740 } });
+const page = await browser.newPage({
+  viewport: { width: 360, height: 740 },
+  extraHTTPHeaders: process.env.GATE_TOKEN ? { "x-test-gate-token": process.env.GATE_TOKEN } : {},
+});
 
 const results = [];
 const check = (name, pass, detail = "") => results.push({ name, pass, detail });

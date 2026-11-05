@@ -68,6 +68,7 @@ createServer((req, res) => {
       if (failRpc) return send(500, { code: "XX000", message: "INTERNAL_DB_DETAIL_MARKER", details: null, hint: null });
       if (url.pathname.endsWith("deploy_test_is_admin")) return send(200, Boolean(users[tokens.get(bearer)]?.admin));
       if (url.pathname.endsWith("deploy_test_take_one")) return send(200, true);
+      if (url.pathname.endsWith("deploy_test_load_purchase")) return send(200, true);
     }
     send(404, { message: "not mocked" });
   });
