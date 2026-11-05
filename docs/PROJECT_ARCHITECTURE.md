@@ -59,7 +59,9 @@ Nothing is chosen until the test in section 4 has run.
 
 **Provisional choice: OpenNext for production, unless the test shows vinext is clearly better.** The store handles orders and customer data, and vinext's own docs warn about production use. The trade-off is that Cloudflare now points new projects at vinext, so OpenNext may get less attention from Cloudflare over time.
 
-**Stay portable.** App code uses only ordinary Next.js features: no PPR, no `"use cache"`, no Node middleware and no native modules such as `sharp`. That keeps moving between adapters or hosts cheap.
+**Stay portable.** App code uses only ordinary Next.js features: no PPR, no `"use cache"` and no native modules such as `sharp`. That keeps moving between adapters or hosts cheap.
+
+**`proxy.ts`, not `middleware.ts` (decided 5 November 2026).** Next.js 16 says `middleware.ts` "is deprecated and will be removed in a future version", and Supabase's guide is built around `proxy.ts`. OpenNext warns that its Node.js proxy support is experimental, though it's merging fixes for it. So `proxy.ts` only refreshes sessions and redirects, and every page and action checks the session and role itself. If `proxy.ts` proves unreliable on Workers, the fallback must be chosen then, with evidence.
 
 ## 4. The biggest risk: 10 ms of CPU
 
@@ -80,7 +82,7 @@ Build one small test app and deploy it with each adapter. It uses labelled sampl
 | Login and `proxy.ts` | Supabase session cookies work and refresh correctly, and `proxy.ts` runs only on the protected paths |
 | Database write from the Worker | A test Postgres function runs, and two competing requests for the last unit give exactly one success |
 | Image upload | Presigned upload to R2 works. Needs R2 enabled, which may need a card, so it waits for the owner's approval. |
-| Image display | `next/image` custom loader serves pre-sized files |
+| Image display | A plain responsive `<img>` component serves pre-sized files |
 | Email | Resend sends from the Worker |
 | Metadata | Sitemap, metadata and error pages work |
 
@@ -128,7 +130,9 @@ Build one small test app and deploy it with each adapter. It uses labelled sampl
 
 **Admin login:** a separate page at `/admin/login`. Being logged in as a customer gives no admin access, because every admin page and action checks the `admin` role on the server and in the database.
 
-**Cached pages and login:** public pages are cached, so they must be the same for everyone. Only `/account`, `/admin` and checkout read the session on the server. On public pages, the header shows the account state from a small browser check, so logged-in customers don't disable caching.
+**Cached pages and login:** public pages are cached, so they must be the same for everyone. Only `/account`, `/admin` and checkout read the session on the server. Session cookies are `HttpOnly`, so browser code can't read them. On public pages, the header gets the account state from a small non-sensitive flag or a same-origin session check, so logged-in customers don't disable caching.
+
+**Server-only auth:** there's no Supabase browser client. Supabase describes `HttpOnly` as "not necessary", because a browser client must read these cookies. This design has none, so `HttpOnly` adds protection, but real session refresh must be retested on real Supabase. Adding a browser client later means removing `HttpOnly`.
 
 **Not at launch:** see section 7 of `IMPLEMENTATION_ROADMAP.md`.
 
@@ -136,7 +140,7 @@ Build one small test app and deploy it with each adapter. It uses labelled sampl
 
 ### Pages and data
 
-- **Cache public catalogue data.** Use static or cached pages for home, categories and products, revalidating on a timer and when the admin publishes a change. Time-based revalidation is the safe default until the test confirms on-demand behaviour.
+- **Cache public catalogue data.** Use static or cached pages for home, categories and products. KV is off until real CPU has been measured and the owner approves it. If it's enabled, use a long `revalidate`, such as one day, plus on-demand invalidation when the admin publishes a change: a 5-minute `revalidate` on about 20 pages could need 5,760 writes a day, against KV's free limit of 1,000.
 - **Turn off link prefetching on listing pages.** Without this, each product card can trigger an extra Worker request.
 - **Limit the session check to `/admin` and `/account`.** `proxy.ts` must not run on public storefront pages.
 - **Show stock from cached data, and check it for real only in `create_order`.** If a cached price is out of date, the server's price wins and the customer sees the change before ordering.
@@ -147,7 +151,7 @@ Build one small test app and deploy it with each adapter. It uses labelled sampl
 - Images live only in R2. The database stores keys and metadata, never image data, and Supabase Storage isn't used.
 - `sharp` can't run on Workers, so the **admin's browser** does the work on upload: it resizes to widths of 400, 800 and 1600px, converts to WebP and removes photo metadata. Targets are about 40, 120 and 250 KB (estimates).
 - The server checks the admin, then issues a short-lived presigned upload URL for a key it generates.
-- A `next/image` custom loader picks the right pre-made size. **Cloudflare Image Transformations aren't used.** Their free plan stops at 5,000 unique transformations a month, and new ones then return an error.
+- A plain responsive `<img>` component with `srcset` picks the right pre-made size, because vinext ignores `next/image` custom loaders. **Cloudflare Image Transformations aren't used.** Their free plan stops at 5,000 unique transformations a month, and new ones then return an error.
 - Images are served from a custom domain such as `images.<domain>`, because `r2.dev` is rate-limited and "should only be used for development purposes". File names include a version, so they can be cached for a year.
 - This requires the domain to be a Cloudflare zone in the same account as the bucket.
 
@@ -253,7 +257,7 @@ src/
     supabase/           server and admin clients
     money.ts            paise helpers and formatting
     auth.ts             requireAdmin()
-    image-loader.ts     next/image custom loader
+    auth-cookies.ts     session cookie settings
   proxy.ts              /admin and /account only
   components/ui/
 supabase/

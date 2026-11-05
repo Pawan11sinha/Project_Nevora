@@ -26,8 +26,10 @@ Stay on free tiers until a documented upgrade trigger is reached. Limits and tri
 
 - Cache public product and category data. Repeat catalogue views shouldn't query Supabase.
 - Avoid unnecessary server requests. Turn off link prefetching on listing pages, keep cart UI in the browser, and don't run `proxy.ts` outside `/admin` and `/account`.
-- Images live only in R2, never in the database or Supabase Storage. Resize and compress them in the admin's browser, and serve pre-made sizes through a custom `next/image` loader. Don't use Cloudflare Image Transformations.
-- Stick to portable Next.js features. No PPR, `"use cache"`, Node middleware or native modules such as `sharp`.
+- Images live only in R2, never in the database or Supabase Storage. Resize and compress them in the admin's browser, and serve pre-made sizes through a plain responsive `<img>` component. Don't use `next/image` custom loaders, which vinext ignores, or Cloudflare Image Transformations.
+- Stick to portable Next.js features. No PPR, `"use cache"` or native modules such as `sharp`.
+- Use `proxy.ts`, not the deprecated `middleware.ts`. OpenNext flags Node.js proxy support as experimental, so `proxy.ts` only refreshes sessions and redirects. Pages and actions must check the session and role themselves.
+- KV stays off until real Worker CPU has been measured and the owner has approved it.
 - Ask before adding any paid service or plan.
 
 ## Rules that must not be broken
@@ -40,6 +42,7 @@ Stay on free tiers until a documented upgrade trigger is reached. Limits and tri
 - Keep the amount received separate from the remaining COD balance. The advance starts at ₹30, is deducted from the total, is configurable in admin, and each order keeps its own copy.
 - Never store UPI PINs, passwords or banking credentials. UPI display details come from admin settings through the server, not frontend code.
 - New accounts are always `customer`. Never read roles from `user_metadata`.
+- All Supabase auth runs on the server, with `HttpOnly` session cookies. A Supabase browser client would need those cookies, so don't add one without changing `authCookieOptions` and retesting. Don't set a short `maxAge`.
 - Payments, stock movements and audit logs are append-only. Correct mistakes with reversal rows. Every order and payment change is audit logged.
 - RLS is on for every table. Admin checks run on the server and in the database, never only in the UI.
 - Never expose secrets to browser code or put them in `NEXT_PUBLIC_` variables. Use `wrangler secret` in production. Commit no `.env*` or `.dev.vars` files except `.env.example`.

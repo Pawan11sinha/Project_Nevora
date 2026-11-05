@@ -112,7 +112,8 @@ Check the allowance against Meesho's actual charges. Until then, sell items unde
 
 | # | Decision | Recommendation | Needed by |
 |---|---|---|---|
-| 1 | Adapter and plan. Any paid plan needs explicit approval after seeing results and cost. | Decide from test results. Provisionally OpenNext. | 7 Nov |
+| 1 | Adapter and plan. Any paid plan needs explicit approval after seeing results and cost. | Decide from real CPU results. Provisionally OpenNext. | 7 Nov |
+| 1a | Whether to enable KV | Decide after real CPU results. Off until then. | After CPU test |
 | 2 | Enable R2, if its checkout needs a card | Decide when the checkout is seen | Before the R2 test |
 | 3 | Compliance budget after the CA's review | Review with CA | By 8 Nov |
 | 4 | Unpaid order hold time | 12 hours | Phase 4 |
