@@ -23,6 +23,7 @@ export async function signIn(_prev: { message: string }, form: FormData) {
 
 export async function signOut() {
   const supabase = await getSupabase();
-  await supabase?.auth.signOut();
+  // Ends this session only. Supabase's default would end all of this user's sessions.
+  await supabase?.auth.signOut({ scope: "local" });
   redirect("/");
 }

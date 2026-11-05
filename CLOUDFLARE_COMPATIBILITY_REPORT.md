@@ -166,9 +166,9 @@ In the first, coarser probe, 50 million iterations failed 20 of 20 when stepped 
 
 A kill during checkout would show the customer an error. The order function's transaction protects stock, but the customer wouldn't know whether the order was placed.
 
-**Proposed decision rule, for your approval:**
+**Decision rule, accepted by the owner on 5 November 2026:**
 
-- **Pass on Free:** 0 `exceededCpu` outcomes across at least 1,000 requests per critical route, both paced and sustained, on real pages using the real database: logged-in `/account`, `/admin`, checkout action and order page.
+- **Pass on Free:** zero `exceededCpu` kills across at least 1,000 requests per critical route, both paced and sustained, on real pages making real Supabase database calls: logged-in `/account`, `/admin`, checkout action and order page.
 - **Fail:** any `exceededCpu` on a critical route. Then the options are reducing that route's CPU and retesting, or Workers Paid at $5 a month, with a default CPU limit of 30 seconds per request, **only with your approval**.
 
 Even a pass only covers the conditions tested, so Workers logs would need watching after launch.

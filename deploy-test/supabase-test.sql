@@ -1,5 +1,6 @@
 -- Deployment test only. Sample data, no real customer details. Deleted with the test project.
--- Paste into Supabase: SQL Editor, New query, Run. Safe to run again, and it resets test stock.
+-- Paste into Supabase: SQL Editor, New query, Run. Safe to run again, and it resets the test
+-- product's price and stock. To undo everything, use supabase-test-rollback.sql.
 
 -- Profiles and roles ---------------------------------------------------------------------------
 create table if not exists public.deploy_test_profiles (
@@ -47,7 +48,9 @@ $$;
 drop policy if exists "own profile" on public.deploy_test_profiles;
 create policy "own profile" on public.deploy_test_profiles
   for select to authenticated using (id = (select auth.uid()));
-revoke insert, update, delete on public.deploy_test_profiles from anon, authenticated;
+-- Start from no rights, whatever this project grants by default, then allow reading only.
+revoke all on public.deploy_test_profiles from public, anon, authenticated;
+grant select on public.deploy_test_profiles to authenticated;
 
 -- Sample product -------------------------------------------------------------------------------
 create table if not exists public.deploy_test_products (
@@ -58,16 +61,24 @@ create table if not exists public.deploy_test_products (
   stock int not null check (stock >= 0)
 );
 alter table public.deploy_test_products enable row level security;
-revoke all on public.deploy_test_products from anon, authenticated;
+revoke all on public.deploy_test_products from public, anon, authenticated;
 
 insert into public.deploy_test_products (id, name, price_paise, cost_paise, stock)
 values (1, 'Sample product (test only)', 19900, 6500, 1)
 on conflict (id) do update set price_paise = 19900, stock = 1;
 
--- The public view leaves out cost. It runs with its owner's rights on purpose, as the
--- table itself grants nothing to the public.
-create or replace view public.deploy_test_products_public as
+-- Everyone can read these columns. Cost has no grant, so it stays unreadable.
+grant select (id, name, price_paise, stock) on public.deploy_test_products to anon, authenticated;
+drop policy if exists "public product read" on public.deploy_test_products;
+create policy "public product read" on public.deploy_test_products
+  for select to anon, authenticated using (true);
+
+-- security_invoker makes the view use the caller's rights, not its owner's. Without it, a
+-- simple view can accept writes that bypass RLS. The revoke removes any default write rights.
+create or replace view public.deploy_test_products_public
+  with (security_invoker = true) as
   select id, name, price_paise, stock from public.deploy_test_products;
+revoke all on public.deploy_test_products_public from public, anon, authenticated;
 grant select on public.deploy_test_products_public to anon, authenticated;
 
 -- Orders ---------------------------------------------------------------------------------------
@@ -80,12 +91,17 @@ create table if not exists public.deploy_test_orders (
   created_at timestamptz not null default now()
 );
 alter table public.deploy_test_orders enable row level security;
-revoke all on public.deploy_test_orders from anon, authenticated;
+revoke all on public.deploy_test_orders from public, anon, authenticated;
 grant select (id, user_id, product_id, unit_price_paise, created_at) on public.deploy_test_orders to authenticated;
 
 drop policy if exists "own orders" on public.deploy_test_orders;
 create policy "own orders" on public.deploy_test_orders
   for select to authenticated using (user_id = (select auth.uid()));
+
+-- Admins can read all orders. Cost stays hidden, because the column grant above applies to them too.
+drop policy if exists "admins read orders" on public.deploy_test_orders;
+create policy "admins read orders" on public.deploy_test_orders
+  for select to authenticated using ((select public.deploy_test_is_admin()));
 
 -- Takes one unit if any is left, and records an order at the database's price. Competing calls
 -- can't both win, because the update locks the row and rechecks the stock.

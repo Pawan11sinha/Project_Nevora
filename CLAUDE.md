@@ -45,7 +45,7 @@ Stay on free tiers until a documented upgrade trigger is reached. Limits and tri
 - All Supabase auth runs on the server, with `HttpOnly` session cookies. A Supabase browser client would need those cookies, so don't add one without changing `authCookieOptions` and retesting. Don't set a short `maxAge`.
 - Payments, stock movements and audit logs are append-only. Correct mistakes with reversal rows. Every order and payment change is audit logged.
 - RLS is on for every table. Admin checks run on the server and in the database, never only in the UI.
-- Never expose secrets to browser code or put them in `NEXT_PUBLIC_` variables. Use `wrangler secret` in production. Commit no `.env*` or `.dev.vars` files except `.env.example`.
+- Never expose secrets to browser code or put them in `NEXT_PUBLIC_` variables. Use `wrangler secret` in production and `.dev.vars` locally. Don't use `.env`, `.env.local` or `.env.production`, because OpenNext compiles them into the Worker bundle. Commit no `.env*` or `.dev.vars` files except `.env.example`.
 - Never cache order, checkout or admin responses. Never log request bodies, addresses or phone numbers.
 - A failed email must not fail an order. Log it in `notifications`.
 

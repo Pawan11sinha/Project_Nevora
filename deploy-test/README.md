@@ -25,15 +25,18 @@ npx wrangler whoami
 
 ### 2. Supabase test project
 
-This is a separate Free project for testing only. Never put real customer information in it.
+This is a separate Free project for testing only. Never put real customer information in it. **Confirm email stays on.**
 
-1. Sign up at https://supabase.com/dashboard, and create a Free organisation. **If it asks for a card or a paid plan, stop.**
-2. Create a project named `nevora-deploy-test`, with region **South Asia (Mumbai)** if offered. If not, note that and choose the closest region.
-3. Save the database password in a password manager. Don't paste it into a chat, or into any file here.
-4. Turn off email confirmation for this test project under **Authentication, Sign In / Providers, Email, Confirm email**. Supabase's built-in email only reaches project team members, so real email verification waits for Resend and a domain. **Don't copy this setting to the real store.**
-5. Open **SQL Editor**, paste in all of `deploy-test/supabase-test.sql`, and press **Run**.
-6. Open **Authentication, Users, Add user, Create new user**, with "Auto Confirm User" ticked. Use the email `nevora-test-admin@example.com` and a new throwaway password that you don't use anywhere else.
-7. In the SQL Editor, make that user an admin:
+**Check you're in the right project.** Everything below applies only to the project open in the dashboard. Each Supabase project has its own database, so this can't reach any other project. The address bar should show the same project ref as `SUPABASE_URL` in `opennext/.dev.vars`.
+
+1. Open **SQL Editor**, paste in all of `deploy-test/supabase-test.sql`, and press **Run**. Supabase may warn about a destructive operation, because of the `drop trigger` and `drop policy` lines that replace this file's own test objects.
+2. Open **Authentication, Users, Add user, Create new user**, and create these three users. Tick **Auto Confirm User** for each, and use one new throwaway password that you don't use anywhere else.
+   - `nevora-test-customer-a@example.com`
+   - `nevora-test-customer-b@example.com`
+   - `nevora-test-admin@example.com`
+
+   Auto Confirm confirms the account without sending an email, and Confirm email stays on for everyone else. Built-in email only reaches project team members, so these addresses could never receive one.
+3. In the SQL Editor, make the admin user an admin:
 
 ```sql
 update public.deploy_test_profiles
@@ -41,16 +44,46 @@ set role = 'admin'
 where id = (select id from auth.users where email = 'nevora-test-admin@example.com');
 ```
 
+4. Check the result. All three should show `confirmed = true`, with `admin` for the admin user and `customer` for the other two:
+
+```sql
+select u.email, u.email_confirmed_at is not null as confirmed, p.role
+from auth.users u
+left join public.deploy_test_profiles p on p.id = u.id
+where u.email like 'nevora-test-%@example.com'
+order by u.email;
+```
+
+**If a user shows `confirmed = false`:** delete it under **Authentication, Users**, and add it again with Auto Confirm ticked. Don't edit `auth.users` directly.
+
 ### 3. Add the values
 
-Open `deploy-test/.env.test` and fill in these lines. Don't paste the values into chat.
+Don't paste any of these into chat. Both files are gitignored.
+
+**`deploy-test/opennext/.dev.vars`:**
 
 - `SUPABASE_URL`: the Project URL, from the **Connect** panel or **Settings, API Keys**
 - `SUPABASE_PUBLISHABLE_KEY`: the **publishable** key. Never use the secret or `service_role` key here.
-- `TEST_ADMIN_EMAIL=nevora-test-admin@example.com`
-- `TEST_ADMIN_PASSWORD=` the throwaway password from step 6
+
+**Don't use `.env.local`.** OpenNext compiles `.env`, `.env.local` and `.env.production` into the Worker bundle, so a later deploy would upload their values. `npm test` fails if one of them exists.
+
+**`deploy-test/.env.test`:**
+
+- `TEST_PASSWORD=` the throwaway password from step 2
 
 Leave `DEPLOY_TEST_TOKEN` as it is.
+
+### Optional: real signup and email verification
+
+This is the only way to test a real confirmation email until Resend and a domain exist. It uses your own address, and doesn't change the project's settings.
+
+- Add `TEST_SIGNUP_EMAIL=` your Supabase account email, and `TEST_SIGNUP_PASSWORD=` another throwaway password, to `deploy-test/.env.test`.
+- The test script signs up once, and checks that login is blocked until you click the link in the email.
+- Built-in email sends about 2 messages an hour, and only to project team members.
+
+## Undoing the setup
+
+Run `deploy-test/supabase-test-rollback.sql` in the SQL Editor of the same project. It removes all `deploy_test_` objects and their data, with the trigger first. Test users remain until you delete them under **Authentication, Users**, or use the commented lines in that file for the `nevora-test-` users. A user from the optional signup must be deleted in the dashboard. No project settings need restoring. Deleting the whole test project also removes everything.
 
 ### Not needed yet
 

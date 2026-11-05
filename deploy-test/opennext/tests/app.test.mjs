@@ -1,11 +1,11 @@
 // Fast checks that need no running server. Uses Node's built-in test runner, so it
 // adds no dependency. tools/smoke.mjs and tools/browser.mjs test a running Worker.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import { authCookieOptions } from "../src/lib/auth-cookies.ts";
 import { isDecodablePath } from "../src/lib/url-guard.ts";
-import { loginDestination, loginSchema } from "../src/lib/validation.ts";
+import { loginDestination, loginSchema, signupSchema } from "../src/lib/validation.ts";
 
 test("login accepts valid credentials", () => {
   assert.equal(loginSchema.safeParse({ email: "a@example.com", password: "x" }).success, true);
@@ -20,6 +20,16 @@ test("login rejects bad input", () => {
   ]) {
     assert.equal(loginSchema.safeParse(input).success, false);
   }
+});
+
+test("signup rejects bad input", () => {
+  assert.equal(signupSchema.safeParse({ email: "not-an-email", password: "longenough1" }).success, false);
+  assert.equal(signupSchema.safeParse({ email: "a@example.com", password: "short" }).success, false);
+  assert.equal(signupSchema.safeParse({ email: "a@example.com", password: "longenough1" }).success, true);
+});
+
+test("logout ends only the current session", () => {
+  assert.match(readFileSync(new URL("../src/app/login-actions.ts", import.meta.url), "utf8"), /signOut\(\{ scope: "local" \}\)/);
 });
 
 test("login can only redirect to known pages", () => {
@@ -60,6 +70,12 @@ test("assets get long-term caching", () => {
 test("KV stays off until real CPU has been measured", () => {
   const config = readFileSync(new URL("../open-next.config.ts", import.meta.url), "utf8");
   assert.doesNotMatch(config, /^import .*kv-/m);
+});
+
+test("no env file exists that OpenNext would compile into the Worker", () => {
+  const compiled = [".env", ".env.local", ".env.production", ".env.production.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"];
+  const found = compiled.filter((name) => existsSync(new URL(`../${name}`, import.meta.url)));
+  assert.deepEqual(found, [], "Move these values to .dev.vars");
 });
 
 test("no secrets or public env values in source config", () => {
