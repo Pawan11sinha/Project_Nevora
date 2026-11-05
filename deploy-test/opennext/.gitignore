@@ -44,3 +44,6 @@ next-env.d.ts
 .dev.vars
 .wrangler/
 .open-next/
+
+# The example file holds no real values
+!.env.example

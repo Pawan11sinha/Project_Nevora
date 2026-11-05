@@ -1,6 +1,8 @@
 # Phase 1a results
 
-Status: **in progress.** Local tests are done. **Real CPU, the deciding test, hasn't run**, because it needs a deployed Worker. Local results show compatibility only, and say nothing about the 10 ms limit.
+**Superseded for OpenNext by `../CLOUDFLARE_COMPATIBILITY_REPORT.md`, which holds real Worker CPU results.** This file remains as the record of the earlier local OpenNext and vinext comparison. vinext hasn't been deployed or measured on Cloudflare.
+
+Status when written: local tests were done, and real CPU hadn't run.
 
 Tested on 5 November 2026 with Next.js 16.4.5, @opennextjs/cloudflare 1.20.16, vinext 1.4.3, @vinext/cloudflare 1.3.3 and wrangler 4.157.0.
 
