@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* NÉVORA design tokens. Gold and taupe are decorative only: tests enforce text contrast. */
+@theme inline {
+  --color-ivory: #f8f5ef;
+  --color-espresso: #34251f;
+  --color-gold: #c5a46d;
+  --color-taupe: #b9a99a;
+
+  /* Supporting shades, for where the four brand colours don't have enough contrast. */
+  --color-cream: #f0eadf;
+  --color-line: #ddd2c4;
+  --color-ink-soft: #6a574c;
+  --color-gold-deep: #7b5e2b;
+  --color-control: #8a7668;
+
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-manrope);
+
+  --text-display: clamp(2.75rem, 7vw, 5.5rem);
+  --text-title: clamp(2rem, 4.5vw, 3.25rem);
+  --text-heading: clamp(1.5rem, 2.8vw, 2rem);
+
+  --ease-gentle: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  background: var(--color-ivory);
+  color: var(--color-espresso);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-espresso);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sections fade in as they scroll into view, using CSS only: no JavaScript, so failed or slow scripts
+   can never hide products. Browsers without support, and reduced-motion users, simply see the section. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 15%;
+    }
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(14px); }
+    }
+  }
+}
