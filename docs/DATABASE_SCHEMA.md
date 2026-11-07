@@ -6,6 +6,8 @@ V1 is **prepaid manual UPI only**. COD, payment gateways, courier APIs, automate
 
 Conventions: `uuid` primary keys unless noted, `timestamptz` for `created_at` and `updated_at`, and integer paise for money (columns end in `_paise`). All foreign keys are indexed.
 
+**Deletion (finding 18, decided 7 November 2026):** every foreign key states `ON DELETE RESTRICT`. No application role (`anon`, `authenticated`, `service_role`), and neither `ledger_owner` nor `lock_owner`, has `DELETE` or `TRUNCATE` on any table. This relies on role separation. **It doesn't stop the table owner, the migration role or a database administrator,** who can delete rows, drop constraints or disable triggers, so the application never uses those roles. How account deletion treats `customer_id` and staff actor keys is decided with those keys in C1b, and stays a CA question.
+
 **No image data is stored in the database, and product images aren't stored in Supabase Storage.** Tables hold only object keys and metadata. Private payment proofs are the one planned use of Supabase Storage, subject to the evaluation in `PROJECT_ARCHITECTURE.md`.
 
 ## Table order
@@ -24,6 +26,8 @@ Conventions: `uuid` primary keys unless noted, `timestamptz` for `created_at` an
 | 30 | `order_review_flags` |
 
 Each foreign key's parent is created before its child, and there are no cycles: `refunds` has no key to receipts or events. Self-references are nullable.
+
+**Build split (decided 7 November 2026):** C1 creates 20 tables: `profiles`, `categories`, `products`, `product_variants`, `store_settings`, `rate_limits`, `audit_logs`, `orders`, `order_items`, `order_transitions`, `order_status_history`, `payment_transitions`, `payment_status_history`, `payment_submissions`, `refunds`, `payment_receipts`, `payment_events`, `stock_movements`, `notifications` (in C1b, because `create_order` queues its notification) and `order_review_flags`. C2 creates the other 10: `product_images`, `collections`, `collection_products`, `trending_picks`, `order_cancellations`, `shipments`, `returns`, `return_items`, `payment_proofs` and `proof_access_log`. No C1 key points to a C2 table. The two administrator-session tables proposed for DEF-6 are a separate future approval, outside these 30.
 
 ## Catalogue
 
@@ -197,7 +201,7 @@ Partial unique index on `(kind, reference_normalised, reference_generation)` whe
 
 ### Refunds
 
-**refunds**: `id`, `order_id`, `return_id` (nullable), `retry_of` (nullable, unique), `origin` (`cancellation`, `late_credit`, `excess`, `return`, `admin`, `retry`), `amount_paise`, `reason`, `status`, `completed_at`, `cancelled_at`, `created_by`, `created_at`. Amount and origin never change.
+**refunds**: `id`, `order_id`, `return_id` (nullable, **added in C2** with its `(return_id, order_id)` key, once `returns` exists), `retry_of` (nullable, unique), `origin` (`cancellation`, `late_credit`, `excess`, `admin`, `retry`, and `return`, **added in C2**), `amount_paise`, `reason`, `status`, `completed_at`, `cancelled_at`, `created_by`, `created_at`. Amount and origin never change.
 
 | From | To | Requires |
 |---|---|---|
@@ -651,6 +655,8 @@ A check constraint enforces: `order_id` is null only for `adjustment` and `purch
 
 **No exactly-once delivery is claimed.** A failed email never fails an order.
 
+**Order notifications are queued inside the order's own transaction** (decided 7 November 2026): `create_order` queues `order_received` (see Checkout). The unique `dedupe_key` allows one row per order and template, so a retry can't queue a second email. `notifications` isn't covered by the order write lock, because it's an outbox, not order state. Its writes stay restricted: only `ledger_owner` inserts, through `create_order` and later named functions, and no application role has direct table rights.
+
 **audit_logs** (append-only): `id`, `actor_id`, `action`, `entity_type`, `entity_id`, `correlation_id`, `before` (jsonb), `after` (jsonb), `created_at`.
 Written by database functions or triggers for every order status change, payment, reversal, refund, return, shipment, correction, flag, price change, stock adjustment and settings change.
 
@@ -677,8 +683,9 @@ Append-only means `update`, `delete` and `truncate` are blocked by triggers and 
 7. Insert the order with `write_lock_tx = NULL`, handling a conflict on `idempotency_key`. If another transaction won the same key, compare `idempotency_hash`: a match returns that order, and a difference is rejected. Nothing else is written.
 8. Call the lock helper, which locks and stamps the new order.
 9. Write snapshots and hold movements, and increase `stock_held`.
+10. Insert one `notifications` row: template `order_received`, `dedupe_key` `order:<order id>:order_received`, status `queued`, ignoring a conflict on `dedupe_key`. It's part of the same transaction, so it exists only if the order does.
 
-Email is sent only after commit.
+Email is sent only after commit, by the sender claiming queued rows. An idempotent retry that returns an existing order writes nothing, so it queues no second email. A sending failure never changes the order.
 
 ## Locking and roles (working design, subject to testing)
 
@@ -746,6 +753,8 @@ Planned, not yet built or tested. Trigger functions are owned by `ledger_schema_
 | Closure check | `orders`, `order_review_flags` | Deferred | **Definer** | No open flag on a closed order |
 | Signup | `auth.users` | AFTER INSERT | **Definer** | Creates a `customer` profile. Hosted rights to be tested. |
 
+`notifications` has no write guard: it isn't covered by the order write lock (decided 7 November 2026). Its writes are restricted by grants and deduplicated by `dedupe_key` instead (see Operations).
+
 ### Indexes
 
 All foreign keys are indexed. These are needed beyond that. Whether `xid8` indexes work as planned is to be tested.
@@ -785,7 +794,7 @@ Composite foreign keys keep related rows on one order:
 | `payment_receipts` | `(refund_id, order_id)` | `refunds (id, order_id)` |
 | `payment_receipts` | `(submission_id, order_id)` | `payment_submissions (id, order_id)` |
 | `refunds` | `(retry_of, order_id)` | `refunds (id, order_id)` |
-| `refunds` | `(return_id, order_id)` | `returns (id, order_id)` |
+| `refunds` | `(return_id, order_id)` | `returns (id, order_id)` (C2) |
 | `returns` | `(shipment_id, order_id)` | `shipments (id, order_id)` |
 | `return_items` | `(return_id, order_id)` | `returns (id, order_id)` |
 | `return_items` | `(order_item_id, order_id)` | `order_items (id, order_id)` |
@@ -826,6 +835,8 @@ No scheduler role exists until one is approved. Customers have no write function
 ## Privileges
 
 **`ledger_schema_owner` owns all 30 tables.** No role other than the owner has `DELETE`, `TRUNCATE`, `REFERENCES` or `TRIGGER`. **`service_role` has no table rights.** `anon` can read only active catalogue data and safe settings, through views and non-cost columns. `authenticated` rights are limited by RLS, and admin reads need AAL2 and an active session. This matrix must be regenerated from the real catalogue once migrations exist.
+
+**Supabase's default privileges** grant `ALL` on tables, sequences and functions that `postgres` creates in `public` to `anon`, `authenticated` and `service_role` (seen in a local dump on 7 November 2026). Every migration must leave those roles with no rights beyond this matrix: default grants are revoked, privileges on each object are revoked explicitly, and the catalogue checks confirm it. The C1a plan avoids the defaults by creating objects as their owner role, subject to testing.
 
 | Tables | `authenticated` | `ledger_owner` |
 |---|---|---|

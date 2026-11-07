@@ -16,7 +16,7 @@ RLS is on for every table. The default is no access. Storefront reads go through
 | Refunds, shipments, returns | None | Own through limited views | Through functions | None |
 | Proof records | None | None directly, own order through the server | Read and review | Signed URLs only |
 | Stock movements, audit logs, status history | None | None | Read only | Written by functions and triggers |
-| Notifications | None | None | Read | Write |
+| Notifications | None | None | Read | Through named functions only, with no direct table rights |
 | Store settings | Only safe public fields, through a view | Same | Through `update_store_settings` | Not used |
 | Profiles | None | Own row: read, update `full_name` and `phone`, never `role` | Read. `role` is granted by hand with SQL, never through the app. | Signup trigger only |
 | Rate limits | None | None | None | Through `rate_limit_hit` |
@@ -171,7 +171,7 @@ A static check also confirms that no proof function can write payment or order s
 | Refund to the wrong person | A completed refund can't be undone by correction | Wrong-order correction refused, manual path, CA review |
 | Database owner bypass | `postgres` or `ledger_schema_owner` can disable triggers | Credential control and detection. Not preventable by design. |
 | Single admin attestation | Nobody independently checks a correction | Reason code, statement check, audit entry and flag. A known limit. |
-| Revoked admin session | A stolen or signed-out session keeps working | `getUser()` on the server, and active-session checks in the database |
+| Revoked admin session | A stolen or signed-out session keeps working | `getUser()` on the server, and active-session checks in the database. **Open gap (DEF-6):** locally, after Supabase detected refresh-token reuse, the newest refresh token still worked immediately afterwards, and an access token issued before detection still passed `getUser()`. A design for the cases our server can see awaits approval. Reuse detected only inside Supabase stays a residual risk until the access token expires. |
 | Bots using up free limits | Daily 100,000 requests run out and the site goes down | Cloudflare bot and WAF rules run before the Worker where the free plan allows them. Crawl rules. Turnstile on checkout if abuse appears. |
 | Surprise costs | R2 usage is billed and no hard cap was found | Admin-only uploads, CDN caching, weekly usage check. No Image Transformations. |
 | Service suspended | A failed card makes R2 buckets return errors | Keep the payment method valid, watch the billing email |
@@ -231,7 +231,7 @@ supabase db dump --remote="$DB_URL" -f history_data.sql --use-copy --data-only -
 | 1 | Project | New Mumbai project, same Postgres major version, with approval | Version matches the manifest |
 | 2 | Settings | Apply the runbook: Auth, Confirm email on, TOTP, redirect URLs, SMTP, Data API | Checklist signed off |
 | 3 | Extensions | Enable those in the manifest, including `pg_cron` | List matches |
-| 4 | Privileges | `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;` | Checked in step 11 |
+| 4 | Privileges | Revoke Supabase's default grants to `anon`, `authenticated` and `service_role` on tables, sequences and functions in `public`, for every role that creates objects there, including `postgres`. Migrations also revoke API-role privileges on each object explicitly. | Checked in step 11 |
 | 5 | Roles, schema, Auth, app data | The first `psql` command below | Counts and checksums match, including all three Auth tables |
 | 6 | Migration history | The second `psql` command | Same versions listed |
 | 7 | Triggers | Public triggers come from `schema.sql`. `post_restore.sql` recreates the `auth.users` signup trigger. | A new test signup gets `customer` |
@@ -339,7 +339,7 @@ The full question list is in `CA_LEGAL_REVIEW.md`.
 - [ ] An order can't be confirmed, processed or dispatched without `paid`, zero refund liability and no blocking flag, and `paid` never confirms by itself
 - [ ] Every status pair is tested: allowed moves pass, all others fail, and cancelled orders can't be reinstated
 - [ ] Simultaneous admin confirmation and expiry give exactly one result, and stock moves once
-- [ ] Revoked, role-removed, factor-removed and banned admin sessions are denied at once, and `aal1` admins see only the MFA page
+- [ ] Tests show that a role-removed, factor-removed or banned admin, and a signed-out session, are denied on the next request even with an unexpired token. Only the signed-out case has local evidence so far (Level 2, AU6); the role, factor and ban cases are untested. `aal1` admins see only the MFA page. Refresh-token reuse (DEF-6) is tested and recorded separately, with no immediate revocation claimed unless a test demonstrates it. Reuse detected only inside Supabase stays a residual risk until the access token expires (see `docs/test-evidence/LEVEL2_ISSUES.md`).
 - [ ] The secret key can't read tables or call admin functions
 - [ ] A partial credit can't become an unpaid retry, and each flag blocks exactly its groups
 - [ ] Corrections validate per reason code, wrong-order is all-or-nothing on both orders, duplicate corrections are refused, and a completed refund refuses correction

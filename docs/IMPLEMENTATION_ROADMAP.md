@@ -51,8 +51,8 @@ Each phase needs its own approval.
 |---|---|---|---|---|
 | **A. Docs** | Record the V1 design in the six plan docs | Owner's approval | Done, 7 Nov | No |
 | **B. Tools** | Pinned Supabase CLI, validate the native runtime | A | 1 | Installs only |
-| **C1. Lock and ledger foundation** | Local migrations: roles, grants, core tables, lock helper, guards, version triggers, `create_order`, `record_verified_payment`, and tests | B | 3–5 | No |
-| **C2. Remaining schema and security** | Remaining tables, functions and tests, run locally. Hosted Auth and role tests need separate approval. | C1. Hosted tests also need Stage 4 done and a project decided. | 6–9 | Hosted tests only |
+| **C1. Lock and ledger foundation** | Local migrations for 20 of the 30 tables (listed in `DATABASE_SCHEMA.md`): roles, grants, the lock helper, guards, version triggers, `create_order`, `record_verified_payment`, and tests. Delivered as C1a, C1b and C1c, each approved separately. | B | 3–5 | No |
+| **C2. Remaining schema and security** | The other 10 tables, including `shipments` and `returns`, plus `refunds.return_id` and the `return` refund origin, and the remaining functions and tests, run locally. Hosted Auth and role tests need separate approval. | C1. Hosted tests also need Stage 4 done and a project decided. | 6–9 | Hosted tests only |
 | **Stage 4** (M1) | The owner's separate SQL and deployment approvals | Owner's approvals | 1–2 | Yes |
 | **R. Runtime assessment** | `vinext check`, then both adapters in a throwaway copy outside `store/`, with real routes and auth | C, Stage 4 tooling | 3–5 | Deployment parts need approval |
 | **D. App integration** | Pinned clients, auth helpers and validation in `store/`, with the UI and sample data unchanged | **Runtime decision and passing C** | 3–4 | Adds packages |
@@ -88,7 +88,7 @@ Phase R exists to break a circular dependency: Phase D waits for the runtime dec
 
 **Gate before real customer data:** Stage 4 passed, runtime chosen, restore proven on the hosted platform, go-live security checks ticked, production rebuilt empty, MFA on, CA answers received, and the owner's explicit go-ahead.
 
-Migrations are versioned, and applied ones are never edited. Locally, rebuild from empty. Before real data, reset production and reapply. With real data, back up first and apply a forward fix, correcting append-only rows only with reversals. Production migrations never run automatically: the owner sees the exact file and fingerprint, and approves it. Seed data stays local.
+Migrations are versioned. A migration counts as **applied** once it's committed to Git or has run on any database that isn't a disposable local stack. After that it's never edited, and changes go in a new migration. Before that, a draft may be edited. Locally, rebuild from empty. Before real data, reset production and reapply. With real data, back up first and apply a forward fix, correcting append-only rows only with reversals. Production migrations never run automatically: the owner sees the exact file and fingerprint, and approves it. Seed data stays local.
 
 **After launch, in order, based on real results:**
 
@@ -153,9 +153,12 @@ Phase C must include these tests. **None has been executed.** Hosted tests need 
 - **Late references:** each case in `DATABASE_SCHEMA.md`, and a late reference can't hold stock.
 - **Closed orders:** status unchanged on reopening, flags opened, and normal checks required again.
 - **Cancellation guard:** refused when financial or submission state changed, including under concurrent credits, reversals and refunds.
-- **Admin sessions:** revoked, role-removed, factor-removed and banned sessions are denied at once with an unexpired token, `aal1` admins see only the MFA page, and access is denied if Auth is unreachable.
+- **Stock match:** a variant's stock change that doesn't equal that transaction's stock movements is refused at commit.
+- **Ledger match:** cached totals or a stored `payment_status` that don't match the ledger are refused at commit.
+- **Refusal evidence:** an expected refusal returns a result and its `audit_logs` row survives. An unexpected failure rolls back and is recorded by `record_refused_attempt` in a separate transaction. If that also fails, it's logged and reported as lost evidence.
+- **Admin sessions:** tests must show that a role-removed, factor-removed or banned admin, and a signed-out session, are denied on the next request even with an unexpired token, through `getUser()` and `require_admin_session()`. Only the signed-out case has evidence so far: locally, an access token was refused by `getUser()` after sign-out (Level 2, AU6). The role, factor and ban checks are untested until these tests pass. `aal1` admins see only the MFA page, and access is denied if Auth is unreachable. **Refresh-token reuse is a separate, open case (DEF-6):** locally, after Supabase detected reuse, the newest refresh token still worked immediately afterwards, and an access token issued before detection still passed `getUser()`. This sequence is tested and its result recorded. No immediate revocation is claimed for it unless a test demonstrates it, and reuse detected only inside Supabase stays a residual risk until the access token expires.
 - **Secret key:** table reads are denied and admin functions are refused.
-- **Notifications:** one digest row per date, one claim, and `delivery_unknown` not resent automatically.
+- **Notifications:** one digest row per date, one claim, and `delivery_unknown` not resent automatically. Exactly one queued `order_received` row per committed order, none after an idempotent retry, and none when the order rolls back.
 - **Payment proofs:** the database-level parts of the required list in `SECURITY_PLAN.md`, and `proof_access_log` same-order keys. Storage tests need a Storage environment and run before M5 at the latest.
 
 **C1 acceptance:** migrations rebuild from empty, catalogue checks pass and catch wrong grants, the write-lock and null-order tests pass, API roles can't write or call internals, `create_order` can't oversell and ignores tampered prices, `record_verified_payment` refuses customers and the secret key, `paid` never confirms, forced failures leave everything unchanged, and concurrency tests reconcile. Local results make no hosted compatibility claim.
@@ -271,6 +274,17 @@ Check the allowance against Meesho's actual charges. Until then, sell items unde
 | 32 | Lost-parcel policy | Define before the shipping phase. Starting proposal in `DATABASE_SCHEMA.md`. | Before M6 |
 | 33 | Single-admin attestation limit on corrections | **Awaiting owner acceptance** | Before M5 |
 | 34 | Scheduler choice, and email provider idempotency | Unverified, each separately approved | Before relying on them |
+| 35 | Finding 11: `refunds` lacks `updated_at` (though Privileges grants an update on it), `returned_at`, `voided_at` and a cancellation reason column | **Open.** Proposed: add the four columns and matching grants | Before C1c |
+| 36 | Finding 12: which customer refusals, such as `create_order` stock or limit refusals, need audit rows, and how they're rate-limited. The core refusal-evidence rule is in `DATABASE_SCHEMA.md`, but this remaining scope was never fully defined. | **Open, scope undefined.** Proposed: log customer refusals only through rate-limited `record_refused_attempt` | Before C1b |
+| 37 | Finding 15: no claim or result functions for the notification sender | **Open.** Proposed: two named functions, with no direct table rights for `service_role` | Before C2 or M5 |
+| 38 | Finding 17: views aren't specified as `security_invoker`, and customer views don't explicitly exclude `public_token`, idempotency fields and stamps | **Open.** Proposed: every view `security_invoker = true`, with an explicit exclusion list | Before C1b |
+| 39 | Finding 19: statement-check attestation is explicit only for reversals, not for `entered_in_error` on every kind | **Open.** Proposed: require it for every kind | Before C2 |
+| 40 | Finding 20: "submission closed" can also mean the reference limit was reached, which could wrongly trigger the inline-expiry row | **Open.** Proposed: check the limit first | Before C2 |
+| 41 | Finding 21: opening conditions for `overpayment` and `old_submission` are undefined | **Open.** Proposed: `overpayment` opens when A − B − C exceeds the total; `old_submission` opens from the sweep or a review action | `overpayment` before C1c, `old_submission` before C2 |
+| 42 | Finding 22: no enforcement stated for shipment moves, return quantity limits, customer returns needing `delivered`, and RTO needing a shipment | **Open.** Proposed: add them to the trigger inventory | Before C2 |
+| 43 | Smaller schema items: primary keys for `rate_limits` and `collection_products`, a stored reason for rejected submissions, the hard-coded 72-hour grace cap, enum values listed in one place, and `amount_mismatch` wording for wrong-order targets | **Open**, to settle during implementation | Before C2 |
+
+Items 35–43 are findings from the 6 November schema audit, recorded here on 7 November. Recording them doesn't resolve them.
 
 **These each need separate explicit approval, whatever else has been approved:** any paid service, upgrade or card use; creating a Supabase project; R2 setup or buckets; any deployment, including test deployments; SQL on any hosted database, including Stage 4 SQL; secrets, external settings, DNS or the domain; a GitHub remote, push or Actions; installing tools, including the Supabase CLI, native runtime and Docker Desktop; and creating real users, orders or payments.
 
@@ -309,6 +323,11 @@ Check the allowance against Meesho's actual charges. Until then, sell items unde
 | 7 Nov 2026 | `~/.supabase/ports.sqlite` is an accepted exception, as machine-level Supabase CLI port-registry state outside `store/`, and it's kept |
 | 7 Nov 2026 | DEF-2 and DEF-5 closed. DEF-4 closed with the qualification that Analytics was excluded and its traffic not directly captured. DEF-6 stays open. |
 | 7 Nov 2026 | `order_review_flags` as table 30, with independent flag lifecycles. Immutable corrections. Genuine bank reversals never erased. No silent write-off after a reversal. One UPI transaction per order. Cancelled orders never reinstated. |
+| 7 Nov 2026 | Build split: C1 creates 20 of the 30 tables, including `notifications` in C1b; C2 creates the other 10, including `shipments` and `returns`. DEF-6's two proposed tables are a separate future approval, outside the 30. |
+| 7 Nov 2026 | `notifications` isn't covered by the order write lock. Its writes stay restricted to `ledger_owner` and named functions, and `dedupe_key` prevents duplicates. |
+| 7 Nov 2026 | `create_order` queues the `order_received` notification inside its own transaction, and order creation triggers it |
+| 7 Nov 2026 | Finding 18: explicit `ON DELETE RESTRICT` keys, no `DELETE` or `TRUNCATE` for application roles, and role separation. No trigger is claimed to stop the owner or a database administrator. |
+| 7 Nov 2026 | A migration counts as applied once it's committed to Git or has run on any non-disposable database |
 
 ## 7. Stage 4 status
 

@@ -86,6 +86,6 @@ Never use teal, which keeps NÉVORA distinct from UnfoldSelf. Use an elegant edi
 
 - Build in small, reviewable steps and follow the roadmap's order.
 - Keep code organised by feature, as set out in the architecture doc. Avoid adding dependencies without a clear need, because Worker size and CPU are limited.
-- Schema changes go in versioned files under `store/supabase/migrations/`. Never edit an applied migration.
+- Schema changes go in versioned files under `store/supabase/migrations/`. Never edit an applied migration, meaning one committed to Git or run on any non-disposable database. A draft run only on disposable local stacks may be edited.
 - Before calling work done, run `npm run typecheck`, `npm run lint` and `npm test`, and test the behaviour itself. For catalogue and checkout pages, check CPU on a deployed Worker. Report failures plainly.
 - Ask before connecting an external service, spending money or touching production data.

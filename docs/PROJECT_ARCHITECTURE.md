@@ -105,10 +105,10 @@ These are options for the owner, not automatic steps.
 
 1. The customer adds products to a cart stored in the browser. This needs no server requests.
 2. At checkout they enter name, mobile, email and address, and see the final order summary and total.
-3. The server validates the input and calls `create_order`. In one transaction it locks variants, checks stock, reads current prices, generates a unique order ID, saves the order and item snapshots, and holds stock. **The order is always saved before any WhatsApp link is offered.**
+3. The server validates the input and calls `create_order`. In one transaction it locks variants, checks stock, reads current prices, generates a unique order ID, saves the order and item snapshots, and holds stock. In the same transaction it queues the "order received" email. **The order is always saved before any WhatsApp link is offered.**
 4. The customer sees the order page at a private link: **"Order placed, not yet confirmed"**, the summary, the exact amount, the configured UPI QR and ID, a reference form, optional proof upload, and an optional WhatsApp button. There's no automatic redirect, so nothing is lost if WhatsApp doesn't open.
 5. The customer pays, then submits their UTR. **A reference is required to request verification, and a screenshot is optional.** WhatsApp isn't required if they can finish on the website.
-6. An "order received" email goes out. It says the order isn't confirmed yet.
+6. Once the order is saved, the "order received" email queued in step 3 is sent. It says the order isn't confirmed yet, and a failed email doesn't affect the order.
 7. The owner checks their **bank or UPI account**, using any reference or proof only as a clue. If the money has arrived, they record the amount and UTR from the bank record in `/admin`. They can also record a credit they find without any customer reference.
 8. **Separately, the owner confirms the order.** If stock has gone, the money stays recorded, and the order is flagged for resolution or refund.
 9. A "confirmed" email goes out. The owner arranges shipping manually, records courier and AWB, and a "shipped" email follows. **Unpaid orders can't be dispatched.**
