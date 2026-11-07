@@ -1,0 +1,11 @@
+exit 0 lifecycle running readiness ready drift unchanged id 63ad65ef
+  database running healthy 
+  analytics running healthy 
+  pgmeta running healthy 
+  rest running healthy 
+  auth running healthy 
+  realtime running healthy 
+  storage running healthy 
+  functions running healthy 
+  studio running healthy 
+  mail running healthy 

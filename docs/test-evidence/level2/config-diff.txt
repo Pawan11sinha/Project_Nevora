@@ -1,0 +1,14 @@
+5c5
+< project_id = "store"
+---
+> project_id = "nevora-level2"
+216c216
+< enable_confirmations = false
+---
+> enable_confirmations = true
+295,296c295,296
+< enroll_enabled = false
+< verify_enabled = false
+---
+> enroll_enabled = true
+> verify_enabled = true

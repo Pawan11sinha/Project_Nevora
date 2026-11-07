@@ -1,0 +1,74 @@
+[
+ {
+  "id": "AU1",
+  "desc": "signup creates unconfirmed user with no session",
+  "pass": true,
+  "detail": "status=200 has_session=false"
+ },
+ {
+  "id": "AU2",
+  "desc": "login before confirming is rejected",
+  "pass": true,
+  "detail": "status=400 code=email_not_confirmed"
+ },
+ {
+  "id": "AU3",
+  "desc": "mail captured in Mailpit, link confirms, login gives aal1",
+  "pass": true,
+  "detail": "mail=true confirm=303 login=200 aal=aal1"
+ },
+ {
+  "id": "AU4",
+  "desc": "wrong password rejected",
+  "pass": true,
+  "detail": "status=400"
+ },
+ {
+  "id": "AU5",
+  "desc": "parent of unused active token: reuse after 11 s returns the current token (documented exception)",
+  "pass": true,
+  "detail": "new=200 parent_reuse=200 returned_current=true"
+ },
+ {
+  "id": "AU5b",
+  "desc": "older token, once its child has rotated, rejected after 11 s",
+  "pass": true,
+  "detail": "status=400 code=refresh_token_already_used"
+ },
+ {
+  "id": "AU5c",
+  "desc": "newest token rejected 11 s after detection (documented session termination)",
+  "pass": true,
+  "detail": "detect=400 newest_after_11s=400 code=refresh_token_already_used"
+ },
+ {
+  "id": "AU6",
+  "desc": "logout revokes refresh token",
+  "pass": true,
+  "detail": "logout=204 refresh_after=400 access_token_after_logout=403 (recorded)"
+ },
+ {
+  "id": "AU7",
+  "desc": "reset via Mailpit: new password works, old fails",
+  "pass": true,
+  "detail": "recover=200 mail=true link=303 update=200 old=400 new=200"
+ },
+ {
+  "id": "AU8",
+  "desc": "TOTP: wrong code rejected, right code gives aal2",
+  "pass": true,
+  "detail": "enrol=200 challenge=200 wrong=422 right=200 aal=aal2"
+ },
+ {
+  "id": "AU10",
+  "desc": "aal2 survives a token refresh",
+  "pass": true,
+  "detail": "refresh=200 aal=aal2"
+ },
+ {
+  "id": "AU9",
+  "desc": "anonymous sign-in rejected",
+  "pass": true,
+  "detail": "status=422 code=anonymous_provider_disabled"
+ }
+]

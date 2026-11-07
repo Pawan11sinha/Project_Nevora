@@ -1,0 +1,24 @@
+--- [target] target=127.0.0.1:23419/postgres exit=0
+$ select current_database(), current_user, version();
+postgres|postgres|PostgreSQL 17.11 on aarch64-apple-darwin25.3.0, compiled by clang version 21.1.7, 64-bit
+--- [pre] target=127.0.0.1:23419/postgres exit=0
+$ select to_regclass('public.level2_mg1_probe');
+
+--- [applied] target=127.0.0.1:23419/postgres exit=0
+$ select to_regclass('public.level2_mg1_probe');
+level2_mg1_probe
+--- [marker] target=127.0.0.1:23419/postgres exit=0
+$ insert into public.level2_mg1_probe values (1, 'level2 sample, must vanish on reset');
+INSERT 0 1
+--- [marker] target=127.0.0.1:23419/postgres exit=0
+$ select count(*) from public.level2_mg1_probe;
+1
+--- [rebuilt] target=127.0.0.1:23419/postgres exit=0
+$ select to_regclass('public.level2_mg1_probe');
+level2_mg1_probe
+--- [rebuilt] target=127.0.0.1:23419/postgres exit=0
+$ select count(*) from public.level2_mg1_probe;
+0
+--- [rebuilt] target=127.0.0.1:23419/postgres exit=0
+$ select version from supabase_migrations.schema_migrations order by version;
+20261107120000

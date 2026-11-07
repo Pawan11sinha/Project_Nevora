@@ -1,0 +1,10 @@
+PASS ST1 create private bucket, 1 MB limit, PNG only | create=200
+PASS ST1b bucket settings stored | public=false limit=1048576
+PASS ST2 upload then authorised download, same SHA-256 | upload=200 download=200 same=true
+PASS ST3a no key, publishable key and public URL all denied | nokey=400 publishable=400 public=400 bytes_leaked=false
+PASS ST3b signed-in user with no policy cannot read or write | create_user=200 read=400 write=400 bytes_leaked=false
+PASS ST4 signed URL works, then denied after expiry | sign=200 before=200 same=true after=400 bytes_after=false
+PASS ST5 wrong type and 2 MB file rejected, nothing stored | wrong_type=400 oversize=400 objects=a.png
+PASS ST6 object and bucket deleted | delete_object=200 read_after=400 delete_bucket=200 bucket_after=400
+INFO ST7 /storage/v1/version status=200 body=0.0.0
+INFO ST7 /storage/v1/status status=200

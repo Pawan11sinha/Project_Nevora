@@ -1,0 +1,6 @@
+CR1 PASS
+CR2 PASS
+CR3 PASS
+drop PASS
+exit codes td1=0 td2=1
+dump exits full=0 schema=0 data=0

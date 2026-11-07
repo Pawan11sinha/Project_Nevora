@@ -1,0 +1,8 @@
+[
+ {
+  "id": "RS1a",
+  "desc": "seed file and user before stop",
+  "pass": true,
+  "detail": "bucket=200 upload=200 user=200"
+ }
+]

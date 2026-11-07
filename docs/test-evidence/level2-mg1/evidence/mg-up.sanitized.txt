@@ -1,0 +1,3 @@
+Target: local stack (127.0.0.1:23419)
+Applying migration 20261107120000_level2_mg1_probe.sql...
+{"applied":["<scratch>/level2-mg1/project/supabase/migrations/20261107120000_level2_mg1_probe.sql"],"message":"Migrations applied","target":{"kind":"local","host":"127.0.0.1","port":23419}}

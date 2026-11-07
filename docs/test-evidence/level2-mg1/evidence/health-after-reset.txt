@@ -1,0 +1,10 @@
+exit 0 lifecycle running readiness sleeping drift unchanged id 092a4c91
+  database running healthy 
+  pgmeta sleeping None 
+  rest sleeping None 
+  auth sleeping None 
+  realtime sleeping None 
+  storage sleeping None 
+  functions sleeping None 
+  studio sleeping None 
+  mail sleeping None 

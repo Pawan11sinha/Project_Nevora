@@ -1,0 +1,95 @@
+--- [target] target=127.0.0.1:31123/postgres exit=0
+$ select current_database(), inet_server_addr(), inet_server_port(), current_user;
+postgres|||postgres
+--- [Q-env] target=127.0.0.1:31123/postgres exit=0
+$ select version();
+PostgreSQL 17.11 on aarch64-apple-darwin25.3.0, compiled by clang version 21.1.7, 64-bit
+--- [Q-env] target=127.0.0.1:31123/postgres exit=0
+$ select name, default_version from pg_available_extensions where name in ('pg_cron','pgtap');
+pgtap|1.3.3
+pg_cron|1.6.4
+--- [Q-env] target=127.0.0.1:31123/postgres exit=0
+$ select schema_name from information_schema.schemata where schema_name='level2_probe';
+--- [CR1] target=127.0.0.1:31123/postgres exit=0
+$ create extension pg_cron;
+CREATE EXTENSION
+--- [CR1] target=127.0.0.1:31123/postgres exit=0
+$ select cron.schedule('level2-probe', '* * * * *', 'select 1');
+1
+--- [CR2] target=127.0.0.1:31123/postgres exit=0
+$ select status, start_time from cron.job_run_details order by start_time desc limit 5;
+--- [CR2] target=127.0.0.1:31123/postgres exit=0
+$ select status, start_time from cron.job_run_details order by start_time desc limit 5;
+--- [CR2] target=127.0.0.1:31123/postgres exit=0
+$ select status, start_time from cron.job_run_details order by start_time desc limit 5;
+succeeded|2026-11-07 06:41:00.006623+00
+--- [CR3] target=127.0.0.1:31123/postgres exit=0
+$ select cron.unschedule('level2-probe');
+t
+--- [CR3] target=127.0.0.1:31123/postgres exit=0
+$ select status, start_time from cron.job_run_details order by start_time desc limit 5;
+succeeded|2026-11-07 06:41:00.006623+00
+--- [CR3] target=127.0.0.1:31123/postgres exit=0
+$ select status, start_time from cron.job_run_details order by start_time desc limit 5;
+succeeded|2026-11-07 06:41:00.006623+00
+--- [CR-cleanup] target=127.0.0.1:31123/postgres exit=0
+$ drop extension pg_cron;
+DROP EXTENSION
+--- [TD-after] target=127.0.0.1:31123/postgres exit=0
+$ select extname from pg_extension where extname='pgtap';
+--- [DP-setup] target=127.0.0.1:31123/postgres exit=0
+$ create schema level2_probe;
+CREATE SCHEMA
+--- [DP-setup] target=127.0.0.1:31123/postgres exit=0
+$ create table level2_probe.marker (id int primary key, label text not null);
+CREATE TABLE
+--- [DP-setup] target=127.0.0.1:31123/postgres exit=0
+$ insert into level2_probe.marker values (1, 'level2 sample');
+INSERT 0 1
+--- [DP2] target=127.0.0.1:31123/postgres exit=0
+$ create database level2_restore;
+CREATE DATABASE
+--- [DP2] target=127.0.0.1:31123/level2_restore exit=0
+$ @<scratch>/level2-sql/dumps/probe-schema.sql
+SET
+SET
+SET
+SET
+SET
+
+SET
+SET
+SET
+SET
+CREATE SCHEMA
+ALTER SCHEMA
+SET
+SET
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+--- [DP2] target=127.0.0.1:31123/level2_restore exit=0
+$ @<scratch>/level2-sql/dumps/probe-data.sql
+SET
+SET
+SET
+SET
+SET
+SET
+SET
+
+SET
+SET
+SET
+SET
+INSERT 0 1
+RESET
+--- [DP2] target=127.0.0.1:31123/level2_restore exit=0
+$ select id, label from level2_probe.marker;
+1|level2 sample
+--- [DP2] target=127.0.0.1:31123/postgres exit=0
+$ select id, label from level2_probe.marker;
+1|level2 sample
+--- [DP-cleanup] target=127.0.0.1:31123/postgres exit=0
+$ drop database level2_restore;
+DROP DATABASE

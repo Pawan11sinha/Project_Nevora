@@ -1,0 +1,1 @@
+PASS RS1a seed file and user before stop | bucket=200 upload=200 user=200

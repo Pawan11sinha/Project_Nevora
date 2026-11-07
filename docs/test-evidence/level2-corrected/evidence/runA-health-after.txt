@@ -1,0 +1,10 @@
+exit 0 lifecycle running readiness ready drift unchanged id 5bb20962
+  database running healthy 
+  pgmeta running healthy 
+  rest running healthy 
+  auth running healthy 
+  realtime running healthy 
+  storage running healthy 
+  functions running healthy 
+  studio running healthy 
+  mail running healthy 

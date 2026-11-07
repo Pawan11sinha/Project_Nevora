@@ -1,0 +1,8 @@
+[
+ {
+  "id": "RS1",
+  "desc": "file and user survive stop and start",
+  "pass": true,
+  "detail": "file=200 same=true login=200"
+ }
+]

@@ -1,0 +1,5 @@
+Target: local stack (127.0.0.1:31123)
+<scratch>/level2-sql/project/supabase/tests/pass.test.sql .. ok
+All tests successful.
+Files=1, Tests=2,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.02 cusr  0.01 csys =  0.04 CPU)
+Result: PASS

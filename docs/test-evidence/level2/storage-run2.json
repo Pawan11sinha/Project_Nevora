@@ -1,0 +1,50 @@
+[
+ {
+  "id": "ST1",
+  "desc": "create private bucket, 1 MB limit, PNG only",
+  "pass": true,
+  "detail": "create=200"
+ },
+ {
+  "id": "ST1b",
+  "desc": "bucket settings stored",
+  "pass": true,
+  "detail": "public=false limit=1048576"
+ },
+ {
+  "id": "ST2",
+  "desc": "upload then authorised download, same SHA-256",
+  "pass": true,
+  "detail": "upload=200 download=200 same=true"
+ },
+ {
+  "id": "ST3a",
+  "desc": "no key, publishable key and public URL all denied",
+  "pass": true,
+  "detail": "nokey=400 publishable=400 public=400 bytes_leaked=false"
+ },
+ {
+  "id": "ST3b",
+  "desc": "signed-in user with no policy cannot read or write",
+  "pass": true,
+  "detail": "create_user=200 read=400 write=400 bytes_leaked=false"
+ },
+ {
+  "id": "ST4",
+  "desc": "signed URL works, then denied after expiry",
+  "pass": true,
+  "detail": "sign=200 before=200 same=true after=400 bytes_after=false"
+ },
+ {
+  "id": "ST5",
+  "desc": "wrong type and 2 MB file rejected, nothing stored",
+  "pass": true,
+  "detail": "wrong_type=400 oversize=400 objects=a.png"
+ },
+ {
+  "id": "ST6",
+  "desc": "object and bucket deleted",
+  "pass": true,
+  "detail": "delete_object=200 read_after=400 delete_bucket=200 bucket_after=400"
+ }
+]

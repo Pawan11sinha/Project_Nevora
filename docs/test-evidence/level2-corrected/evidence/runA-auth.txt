@@ -1,0 +1,14 @@
+PASS AU1 signup creates unconfirmed user with no session | status=200 has_session=false
+PASS AU2 login before confirming is rejected | status=400 code=email_not_confirmed
+PASS AU3 mail captured in Mailpit, link confirms, login gives aal1 | mail=true confirm=303 login=200 aal=aal1
+PASS AU4 wrong password rejected | status=400
+PASS AU5 parent of unused active token: reuse after 11 s returns the current token (documented exception) | new=200 parent_reuse=200 returned_current=true
+PASS AU5b older token, once its child has rotated, rejected after 11 s | status=400 code=refresh_token_already_used
+INFO AU5c-immediate newest token straight after detection: status=200 new_session_token=true
+PASS AU5c newest token rejected 11 s after detection (documented session termination) | detect=400 newest_after_11s=400 code=refresh_token_already_used
+INFO AU5d access token issued before detection, getUser after detection: status=200
+PASS AU6 logout revokes refresh token | logout=204 refresh_after=400 access_token_after_logout=403 (recorded)
+PASS AU7 reset via Mailpit: new password works, old fails | recover=200 mail=true link=303 update=200 old=400 new=200
+PASS AU8 TOTP: wrong code rejected, right code gives aal2 | enrol=200 challenge=200 wrong=422 right=200 aal=aal2
+PASS AU10 aal2 survives a token refresh | refresh=200 aal=aal2
+PASS AU9 anonymous sign-in rejected | status=422 code=anonymous_provider_disabled

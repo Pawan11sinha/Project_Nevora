@@ -1,0 +1,8 @@
+Code\x20H 127.0.0.1:43135
+Code\x20H 127.0.0.1:57263
+Code\x20H 127.0.0.1:57299
+ControlCe *:5000
+ControlCe *:7000
+mongod 127.0.0.1:27017
+mongod [::1]:27017
+rapportd *:59990

@@ -1,0 +1,3 @@
+Target: local stack (127.0.0.1:31123)
+Dumping schemas from local database...
+Dumped schema to <scratch>/level2-sql/dumps/full-schema.sql.
