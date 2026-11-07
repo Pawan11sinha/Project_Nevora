@@ -1,10 +1,10 @@
 // Checks navigation behaviour in a real browser, and captures open-menu screenshots.
 import { mkdirSync } from "node:fs";
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./lib/staging-auth.mjs";
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 const out = new URL("../screenshots/phase-b/", import.meta.url);
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 let failed = 0;
 const check = (name, pass, detail = "") => { console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`); if (!pass) failed++; };
 

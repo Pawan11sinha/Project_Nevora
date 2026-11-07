@@ -1,9 +1,9 @@
 // Phone layout and reveal safety: failed or slow scripts, reduced motion, sideways scroll, tap targets.
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./lib/staging-auth.mjs";
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 let failed = 0;
 const check = (name, pass, detail = "") => { console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`); if (!pass) failed++; };
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 // Each section must be fully visible once it's on screen, however scripts behaved.
 const visibleWhenReached = (page) => page.evaluate(async () => {
   const out = [];
@@ -41,7 +41,7 @@ list = await visibleWhenReached(blocked);
 check("scripts fail to load: every section still appears", allOpaque(list), list.join(","));
 
 const slowContext = await browser.newContext({ viewport: { width: 360, height: 740 } });
-await slowContext.route("**/_next/static/**/*.js", async (r) => { await new Promise((s) => setTimeout(s, 4000)); await r.continue().catch(() => {}); });
+await slowContext.route("**/_next/static/**/*.js", async (r) => { await new Promise((s) => setTimeout(s, 4000)); await r.fallback().catch(() => {}); });
 const slow = await slowContext.newPage();
 await slow.goto(`${base}/`, { waitUntil: "commit" });
 await slow.waitForSelector(".reveal", { state: "attached" });
@@ -50,7 +50,7 @@ check("scripts delayed 4 s: every section already appears", allOpaque(list), lis
 
 for (const width of [320, 360, 768, 1024, 1440]) {
   const page = await (await browser.newContext({ viewport: { width, height: 800 } })).newPage();
-  for (const route of ["/", "/categories/jewellery", "/products/sample-dome-jhumka"]) {
+  for (const route of ["/", "/categories/jewellery", "/products/sample-dome-jhumka", "/bag"]) {
     await page.goto(base + route, { waitUntil: "networkidle" });
     check(`no sideways scroll at ${width}px on ${route}`, await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth));
   }
@@ -60,7 +60,9 @@ const phone = await (await browser.newContext({ viewport: { width: 360, height: 
 await phone.goto(`${base}/`, { waitUntil: "networkidle" });
 const logoOffset = await phone.evaluate(() => { const r = document.querySelector("body > header a[href='/']").getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - document.documentElement.clientWidth / 2); });
 check("logo is centred on phones", logoOffset <= 2, `${logoOffset.toFixed(1)}px off centre`);
-check("phone header shows only menu and bag", await phone.locator("body > header button:visible").count() === 2);
+const headerButtons = await phone.locator("body > header button:visible").count();
+const headerBag = await phone.locator("body > header a[href='/bag']:visible").count();
+check("phone header shows only menu and bag", headerButtons === 1 && headerBag === 1, `${headerButtons} buttons, ${headerBag} bag link`);
 const touch = await (await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true })).newPage();
 for (const route of ["/", "/categories/jewellery", "/products/sample-dome-jhumka"]) {
   await touch.goto(base + route, { waitUntil: "networkidle" });

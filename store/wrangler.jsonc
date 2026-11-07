@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // STAGING ONLY. This Worker is reachable only on its free workers.dev address. There are deliberately no
+  // "routes", custom domains or production environment here: those are added in a separate, approved step.
+  // It holds labelled sample data, with no Supabase, KV, R2 or payment connection. Its only secret is STAGING_PASSWORD.
+  "name": "nevora-store-staging",
+  "main": "custom-worker.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Static files (/_next/static, /data/pin, /sample) are served straight from static assets without running the
+  // Worker. run_worker_first is left at its default (false) on purpose. Their headers come from public/_headers.
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nevora-store-staging" }],
+  // Off until the staging password is set. Deploy 1 uploads the Worker with no public address; the owner then runs
+  // `npx wrangler secret put STAGING_PASSWORD`; only after that is this set to true and deployed again. The password
+  // gate (src/lib/staging-gate.ts) fails closed without the secret. If check-deploy ever finds pages reachable without
+  // the password, set this back to false and redeploy.
+  "workers_dev": true,
+  "preview_urls": false,
+  // Invocation logs would record every visitor's IP address, so only errors and console output are kept.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } }
+}

@@ -1,0 +1,46 @@
+{
+  "version": "v1",
+  "source": {
+    "title": "All India Pincode Directory with contact details along with Latitude and Longitude",
+    "publisher": "Department of Posts, Ministry of Communications, Government of India",
+    "platform": "Open Government Data (OGD) Platform India, data.gov.in",
+    "licence": "Government Open Data License – India (GODL-India)",
+    "file": "5c2f62fe-5afa-4119-a499-fec9d604d5bd.csv",
+    "sha256": "701ee84ba125a914e7ffc979c0308b3a041b8adffa85ec9d5f4e0579ecf062e5",
+    "bytes": 23066077
+  },
+  "changes": [
+    "Kept only PIN code, district, state and coordinates; dropped circle, region, division, office type and delivery status.",
+    "District and post office names converted to title case; the 'B.O', 'S.O' and 'H.O' suffixes removed.",
+    "Districts used as the suggested city, except Delhi's districts (suggested as 'Delhi', or 'New Delhi' for the New Delhi district), 'Mumbai Suburban' (as 'Mumbai') and 'Bengaluru Urban' (as 'Bengaluru').",
+    "A missing state was filled only where the district name belongs to exactly one state elsewhere in the file.",
+    "Coordinates with latitude and longitude swapped were corrected; coordinates outside India, or far from the other offices of the same PIN or district, were removed.",
+    "Coordinates rounded to 0.001 degrees, and offices of one PIN within about 500 m merged into one point."
+  ],
+  "stats": {
+    "rows": 165627,
+    "badPinRows": 0,
+    "rowsWithoutDistrict": 715,
+    "statesInferred": 0,
+    "rowsWithoutState": 0,
+    "pins": 19586,
+    "pinsWithoutPlace": 100,
+    "pinsWithSeveralPlaces": 1238,
+    "coordinates": {
+      "missing": 11908,
+      "swapped": 786,
+      "outsideIndia": 1816,
+      "farFromPin": 10174,
+      "farFromDistrict": 1073,
+      "kept": 139941,
+      "pointsAfterMerging": 109681
+    }
+  },
+  "files": {
+    "prefixFiles": 900,
+    "geoBytes": 316360,
+    "geoBytesUnzipped": 939312,
+    "places": 743,
+    "geoPins": 19212
+  }
+}

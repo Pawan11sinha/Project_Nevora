@@ -1,9 +1,9 @@
 // Measures compressed JavaScript actually downloaded per page. Usage: node scripts/measure-js.mjs <label>
 import { writeFileSync } from "node:fs";
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./lib/staging-auth.mjs";
 const label = process.argv[2] ?? "run";
 const base = process.env.BASE_URL ?? "http://localhost:3100";
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 const results = {};
 for (const route of ["/", "/categories/jewellery", "/collections/korean-edit", "/products/sample-dome-jhumka"]) {
   const context = await browser.newContext({ viewport: { width: 360, height: 740 } });

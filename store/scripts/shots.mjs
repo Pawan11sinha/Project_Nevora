@@ -1,13 +1,13 @@
 // Takes screenshots of a local build. Usage: node scripts/shots.mjs <phase> <route> [route...]
 import { mkdirSync } from "node:fs";
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./lib/staging-auth.mjs";
 
 const [phase, ...routes] = process.argv.slice(2);
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 const out = new URL(`../screenshots/${phase}/`, import.meta.url);
 mkdirSync(out, { recursive: true });
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 for (const [label, width, height] of [["desktop", 1440, 900], ["mobile", 360, 740]]) {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, reducedMotion: "reduce" }); // Full-page shots never scroll, so show the settled state.
   const page = await context.newPage();

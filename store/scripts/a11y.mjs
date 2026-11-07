@@ -1,12 +1,12 @@
 // Runs axe-core on local pages, on desktop and phone sizes. Usage: node scripts/a11y.mjs <route> [route...]
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./lib/staging-auth.mjs";
 
 const routes = process.argv.slice(2);
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 const axe = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 let total = 0;
 for (const [label, width, height] of [["desktop", 1440, 900], ["mobile", 360, 740]]) {
   const page = await (await browser.newContext({ viewport: { width, height } })).newPage();

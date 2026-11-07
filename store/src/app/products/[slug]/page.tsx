@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/catalogue/ProductCard";
 import { ProductImage } from "@/components/catalogue/ProductImage";
-import { FinishPicker } from "@/components/product/FinishPicker";
+import { AddToBag } from "@/components/product/AddToBag";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRODUCTS, categoryOf, findProduct, formatPrice, productsInSubcategory, subcategoryName } from "@/lib/sample-catalogue";
 
@@ -44,11 +43,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <h1 className="mt-2 font-serif text-title font-medium leading-[1.05]">{product.name}</h1>
           <p className="mt-3 text-xl font-medium">{formatPrice(product.pricePaise)}<span className="ml-2 align-middle text-xs font-normal text-ink-soft">Sample price</span></p>
           <p className="mt-2 text-sm font-medium">{product.soldOut ? "Sold out" : "In stock"}</p>
-          <div className="mt-6"><FinishPicker finishes={product.finishes} /></div>
-          <div className="mt-6">
-            {/* The real bag arrives in M5. This prototype takes no orders. */}
-            <Button disabled className="min-h-12 w-full cursor-not-allowed !bg-ink-soft text-center !text-ivory !opacity-100">{product.soldOut ? "Sold out" : "Ordering isn't available in this prototype"}</Button>
-          </div>
+          {/* The bag lives in the browser. Checkout, which will recalculate prices on the server, isn't built yet. */}
+          <AddToBag slug={product.slug} name={product.name} finishes={product.finishes} soldOut={product.soldOut} />
           <div className="mt-7 border-t border-line">
             {details(product.material, product.description).map((d, i) => (
               <details key={d.title} open={i === 0} className="group border-b border-line">

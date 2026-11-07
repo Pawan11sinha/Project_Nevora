@@ -1,17 +1,17 @@
 // Checks real pages in a browser: routes, filters, hidden empties, honest content, images.
-import { chromium } from "playwright-core";
+import { stagingFetch, launchBrowser } from "./lib/staging-auth.mjs";
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 let failed = 0;
 const check = (name, pass, detail = "") => { console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`); if (!pass) failed++; };
-for (const [path, status] of [["/", 200], ["/categories/jewellery", 200], ["/categories/jewellery/earrings", 200], ["/categories/hair-accessories/claw-clips", 200], ["/collections/korean-edit", 200], ["/collections/coquette-edit", 200], ["/collections/minimal-edit", 200], ["/collections/under-299", 200], ["/collections/under-499", 200], ["/collections/new-arrivals", 200], ["/collections/trending", 200], ["/products/sample-dome-jhumka", 200], ["/info/shipping", 200], ["/categories/jewellery/anklets", 404], ["/collections/festive-edit", 404], ["/collections/gift-box", 404], ["/products/nope", 404], ["/categories/nope", 404]]) {
-  const r = await fetch(base + path);
+for (const [path, status] of [["/", 200], ["/categories/jewellery", 200], ["/categories/jewellery/earrings", 200], ["/categories/hair-accessories/claw-clips", 200], ["/collections/korean-edit", 200], ["/collections/coquette-edit", 200], ["/collections/minimal-edit", 200], ["/collections/under-299", 200], ["/collections/under-499", 200], ["/collections/new-arrivals", 200], ["/collections/trending", 200], ["/products/sample-dome-jhumka", 200], ["/info/shipping", 200], ["/bag", 200],["/categories/jewellery/anklets", 404], ["/collections/festive-edit", 404], ["/collections/gift-box", 404], ["/products/nope", 404], ["/categories/nope", 404]]) {
+  const r = await stagingFetch(base + path);
   check(`${path} returns ${status}`, r.status === status, `status=${r.status}`);
 }
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await launchBrowser();
 const page = await (await browser.newContext({ viewport: { width: 360, height: 740 } })).newPage();
 const errors = []; page.on("pageerror", (e) => errors.push(String(e))); page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 
-const server = await (await fetch(`${base}/categories/jewellery`)).text();
+const server = await (await stagingFetch(`${base}/categories/jewellery`)).text();
 check("full product list is in the server HTML, before JavaScript", (server.match(/href="\/products\//g) ?? []).length >= 9);
 
 await page.goto(`${base}/categories/jewellery`, { waitUntil: "networkidle" });
@@ -34,7 +34,7 @@ check("filtering makes no server requests", requests.filter((u) => !/\.svg|_next
 await page.goto(`${base}/products/sample-dome-jhumka`, { waitUntil: "networkidle" });
 await page.getByText("Gold tone", { exact: true }).click();
 check("finish picker updates the selection", (await page.locator("legend").textContent()).includes("Gold tone"));
-check("ordering is disabled", await page.getByRole("button", { name: /Ordering isn't available/ }).isDisabled());
+check("add to bag is available on an in-stock product", await page.getByRole("button", { name: "Add to bag" }).isEnabled());
 await page.goto(`${base}/products/sample-charm-bracelet`, { waitUntil: "networkidle" });
 check("sold-out product can't be ordered", await page.getByRole("button", { name: "Sold out" }).isDisabled());
 

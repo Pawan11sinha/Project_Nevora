@@ -2,8 +2,11 @@
 
 import { useId, useState } from "react";
 
-export function FinishPicker({ finishes }: { finishes: string[] }) {
-  const [selected, setSelected] = useState(finishes[0]);
+// Works on its own, or controlled by a parent through value and onChange.
+export function FinishPicker({ finishes, value, onChange }: { finishes: string[]; value?: string; onChange?: (finish: string) => void }) {
+  const [own, setOwn] = useState(finishes[0]);
+  const selected = value ?? own;
+  const setSelected = (finish: string) => (onChange ? onChange(finish) : setOwn(finish));
   const name = useId();
   return (
     <fieldset>
