@@ -20,6 +20,10 @@ out/
 # Business plan with personal and supplier details: stays on the owner's computer
 novero_chat.md
 
+# Original India Post PIN code CSV from data.gov.in (23 MB). Only the files generated from it, under
+# store/public/data/pin/, are committed. Rebuild them with store/scripts/build-pin-data.mjs.
+/5c2f62fe-5afa-4119-a499-fec9d604d5bd (1).csv
+
 # Local files
 *.log
 .DS_Store

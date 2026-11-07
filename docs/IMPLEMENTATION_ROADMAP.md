@@ -4,6 +4,8 @@ Status: product plan approved by the owner on 6 November 2026. **Approval covers
 
 **Target: public launch in the week of 11 January 2027.** The 1 December date is withdrawn. Payment security, inventory accuracy and checkout functionality won't be compromised to meet a date.
 
+**8 November 2026: bringing the hero banner manager forward adds 6–9 working days (M3b and M4b below).** At the upper estimates, launch moves about two weeks later than the January week, so roughly the week of 25 January 2027. That's indicative only: all dates from M2 onwards are still re-baselined after Phase C.
+
 ## 1. Launch scope
 
 **In the first release:**
@@ -19,8 +21,9 @@ Status: product plan approved by the owner on 6 November 2026. **Approval covers
 - Manual shipping, and essential cancellation, return and refund handling
 - Manually curated Trending Now
 - Lightweight Shop by Aesthetic (Korean Edit, Coquette Edit, Minimal Edit, Under ₹299, Under ₹499), where actual products support each one
+- **Homepage hero banner manager** (brought forward by the owner on 8 November 2026): multiple campaign banners with separate desktop and mobile images, a title, an optional subtitle, and button text with an admin-chosen destination (an existing category, subcategory, product or collection, or a NÉVORA link), ordered and shown as a carousel when several are live. Published manually; an end date hides a banner automatically; start dates never publish. The existing NÉVORA hero is the fallback. No countdown timers.
 
-**Later:** COD and COD remittance reconciliation, payment gateways, automated verification and refunds, courier APIs and tracking, multi-order receipt allocation, advanced campaigns, sales-ranked trending, a reusable collection manager, homepage and banner managers, the AI shopping assistant, loyalty and advanced personalisation.
+**Later:** COD and COD remittance reconciliation, payment gateways, automated verification and refunds, courier APIs and tracking, multi-order receipt allocation, advanced campaigns, sales-ranked trending, a reusable collection manager with promotional collection sections, the creator ("Loved by Creators") and Instagram gallery sections, verified-purchase reviews, the AI shopping assistant, loyalty and advanced personalisation.
 
 ## 2. Timeline
 
@@ -31,8 +34,10 @@ All estimates are working days of building and review, on a five-day week, and h
 | **M0. UI prototype** | Design system, key screens, Motion bundle measurement. Sample data, local only. | Built | Approved as a local prototype on 6 Nov, subject to the owner's browser and phone review. Not production-ready. | Doesn't touch `deploy-test/`, Supabase or Cloudflare. |
 | **M1. Stage 4 complete** | The 10 ms decision on real routes, KV decision, final Cloudflare architecture | 1–2 | By 13 Nov | Approvals in section 6, owner's dashboard checks |
 | **M2. Foundation** | Phases A to G below: real schema and RLS, tested functions, runtime decision, app integration, proven backups | 21–32 | To be re-baselined | See the phases below |
-| **M3. Catalogue and admin** | Admin login, products, variants, categories, stock, image uploads | 4–5 | 19–25 Nov | M2, R2 decision, domain |
+| **M3. Catalogue and admin** | Admin login, products, variants, categories, stock, image uploads | 4–5 | 19–25 Nov | M2, storage decision (Supabase Storage proposed, since R2 isn't approved), domain |
+| **M3b. Publish pipeline** | Private GitHub repo and CI; "Publish" in admin starts a rebuild and deploy (Option A, live in about 3–5 minutes); a Worker cron trigger rebuilds when a banner's end date passes; published images copied into static assets at build | 2–3 | To be re-baselined | M2 Phase F (GitHub), a Cloudflare API token and GitHub token, each approved |
 | **M4. Storefront** | Navigation, home, listing, search, filters, product pages, lightweight Shop by Aesthetic | 5–6 | 26 Nov–3 Dec | M0, M3 |
+| **M4b. Hero banner manager** | `homepage_banners`, admin screens with preview and destination checks, homepage carousel with the NÉVORA hero as fallback | 4–6 | To be re-baselined | M3, M3b, M4 |
 | **M5. Checkout, payments, accounts** | Cart, checkout, manual UPI/QR, references, payment proof, verification, accounts, emails | 6–8 | 4–15 Dec | M4, Resend, UPI details |
 | **M6. Order operations** | Manual shipping, cancellation, refunds, returns, inventory reconciliation | 3–4 | 16–21 Dec | M5, courier choice, policies, lost-parcel policy |
 | **M7. Manual trending and real catalogue** | Trending manager, real products and photos | 1–2 | 22–23 Dec | Stock and photos |
@@ -41,7 +46,7 @@ All estimates are working days of building and review, on a five-day week, and h
 | **Buffer** | Fixes from the pilot, and year-end delays | 2+ | 7–8 Jan | |
 | **Public launch** | | | **Week of 11 Jan 2027** | All above, plus owner's go-ahead |
 
-**Total:** to be recalculated after Phase C. The earlier total of 29–40 working days assumed 2–3 days for M2.
+**Total:** to be recalculated after Phase C. The earlier total of 29–40 working days assumed 2–3 days for M2. M3b and M4b add 6–9 working days.
 
 ### M2 phases
 
@@ -56,8 +61,8 @@ Each phase needs its own approval.
 | **Stage 4** (M1) | The owner's separate SQL and deployment approvals | Owner's approvals | 1–2 | Yes |
 | **R. Runtime assessment** | `vinext check`, then both adapters in a throwaway copy outside `store/`, with real routes and auth | C, Stage 4 tooling | 3–5 | Deployment parts need approval |
 | **D. App integration** | Pinned clients, auth helpers and validation in `store/`, with the UI and sample data unchanged | **Runtime decision and passing C** | 3–4 | Adds packages |
-| **E. Production project** | Confirm the plan, create the project and apply approved migrations, with no real data | D, owner's approval | 1 | **Yes** |
-| **F. Backups** | GitHub, storage location, job and restore test | E, approvals | 2–3 | **Yes** |
+| **E. Production project** | Confirm the plan, create the project and apply approved migrations, with no real data. **Decided 8 Nov:** Supabase Free for development and the private pilot only; the production database plan is decided at the M8–M9 gate. | D, owner's approval | 1 | **Yes** |
+| **F. Backups** | GitHub, storage location, job and restore test. On Supabase Free: an **encrypted daily `supabase db dump`** (roles, schema, data) from GitHub Actions within the free allowance, with the key held only by the owner, a separate export of Storage files, and a **restore drill** into a fresh project. Up to 24 hours of data can be lost. | E, approvals | 2–3 | **Yes** |
 | **G. Real data gate** | Go-live checks, rebuild production empty | All above, CA answers | 1–2 | **Yes** |
 
 Phase B stops if validation fails: the runtime must start, Auth, Storage, `pg_cron`, `test db` and `db dump --local` must work, and Postgres must match the hosted version. Docker Desktop needs separate approval.
@@ -94,7 +99,7 @@ Migrations are versioned. A migration counts as **applied** once it's committed 
 
 | Milestone | Delivers | Days |
 |---|---|---|
-| M10 | Reusable collection manager and homepage and banner managers | 4–6 |
+| M10 | Reusable collection manager, promotional collection sections, and the creator and Instagram gallery sections (images first, with videos linking to Instagram) | 5–8 |
 | M11 | Campaigns, discounts and coupons, aiming to finish before Valentine's Day 2027 | 5–7 |
 | M12 | Sales-ranked trending, once enough real sales exist | 3–4 |
 | M13 onwards | Verified reviews, saved addresses, wishlist, Razorpay, automated WhatsApp, AI assistant, loyalty, personalisation | Not estimated |
@@ -105,7 +110,9 @@ Migrations are versioned. A migration counts as **applied** once it's committed 
 |---|---|
 | **Stage 4 fails the 10 ms rule** | Needs route changes or Workers Paid at about $5 a month, with approval. Could add days, and changes M2 onwards. |
 | **KV test fails, or is unsuitable** | Admin changes need another refresh method. Could add days to M3 and M4. |
-| **R2 needs a card that isn't accepted** | Blocks product images |
+| **R2 needs a card that isn't accepted** | **Happened (8 Nov): R2 isn't approved.** Supabase Storage is proposed, with published images copied into static assets at build so visitors never use Supabase bandwidth. Needs the owner's approval and a rule change for product images. |
+| **GitHub Actions' free allowance runs out** | Publishing and backups stop until the next month; with no payment method, nothing is charged and the live site is unchanged. Kept small: builds run only on publish or expiry. The Worker expiry safety net still removes expired banners. |
+| **Supabase Free project pauses** | Checkout, order saving, login and admin stop until the owner restores it from the dashboard; pre-rendered pages keep working. Reduced by the Worker cron's regular queries and the weekly check of warning emails. |
 | **Trademark isn't clear** | Delays the domain and packaging, which delays email and images |
 | **Late stock, photos, GST or legal review** | Moves M7 and M9 directly |
 | **Hosted platform blocks the Auth backup** | Real customer data stays blocked until the owner chooses an alternative |
@@ -167,6 +174,24 @@ Phase C must include these tests. **None has been executed.** Hosted tests need 
 - Admin adds products, variants, photos and categories without code changes. Subcategories work.
 - Non-admins can't reach any admin page, action or upload URL.
 - Empty categories stay hidden on the storefront.
+
+**M3b. Publish pipeline**
+- Only an admin at AAL2 can start a publish. The GitHub token can only start the one workflow, and secrets live only in Wrangler and GitHub secrets.
+- A publish goes live in about 3–5 minutes. Overlapping publishes queue, and the newest wins.
+- A banner whose end date has passed disappears within about 20 minutes, without the admin doing anything.
+- The Worker cron that checks end dates also keeps the Supabase Free project active (about 96 small queries a day). It reduces the pause risk but doesn't eliminate it, so Supabase's pause-warning emails are still checked weekly.
+- Publishing stays within GitHub's included Free allowance, with no payment method. If the allowance runs out, workflows are blocked, nothing is charged and the live site is unchanged.
+- Visitors load published images from static assets, never from Supabase.
+- A failed build leaves the live site unchanged, and the admin sees that it failed.
+
+**M4b. Hero banner manager**
+- Admin creates, edits, previews, orders, publishes, unpublishes and deletes banners without code changes.
+- A banner appears only after it's published, and never before. Start dates never publish anything.
+- Publishing is refused if a destination doesn't exist or isn't active, if either image or the alt text is missing, or if the end date has passed.
+- Desktop and mobile images are both used, and the button works by click, tap and keyboard.
+- With no live banner, the existing NÉVORA hero shows. No countdowns, invented urgency or unverified claims.
+- The homepage stays pre-rendered: no Supabase query per visit.
+- **Expiry safety net:** each banner's end time is written into the pre-rendered homepage, and `custom-worker.ts` removes expired banners while serving `/` (Cloudflare's streaming HTML rewriter), revealing the NÉVORA fallback hero if none remain. End dates therefore take effect even if GitHub Actions is blocked or Supabase is paused. It needs no JavaScript, and must pass the CPU rule on `/` and the browser checks before it's relied on.
 
 **M4. Storefront**
 - All product data, prices, stock and categories come from the database.
@@ -298,6 +323,13 @@ Items 35–43 are findings from the 6 November schema audit, recorded here on 7 
 | 6 Nov 2026 | Campaigns are manually published. Start date is informational. End date stops discounts automatically. Admin can deactivate at any time. |
 | 6 Nov 2026 | Manual trending at launch, and sales ranking later, under the rules in `PROJECT_ARCHITECTURE.md` |
 | 6 Nov 2026 | New palette, and Motion for React, used selectively after measuring its bundle impact |
+| 8 Nov 2026 | Hero banner manager brought forward into the launch scope (M3b and M4b), accepting a later launch. Creators, Instagram gallery, promotional collection sections and verified reviews stay after launch. |
+| 8 Nov 2026 | Countdown timers stay banned. Banners publish manually only; end dates hide them automatically; start dates never publish. |
+| 8 Nov 2026 | R2 isn't approved if it needs a card, billing authorisation or possible overage charges. Supabase Storage is evaluated first. |
+| 8 Nov 2026 | Homepage updates use Option A: publishing rebuilds and redeploys the site (about 3–5 minutes). The homepage stays pre-rendered, with no KV and no per-visit rendering. |
+| 8 Nov 2026 | Supabase Free for development and the private pilot, with keep-alive, encrypted daily backups and a restore drill. The production database plan (Free with accepted risks, or a paid plan) is decided at the M8–M9 gate. |
+| 8 Nov 2026 | GitHub Actions stays within the included Free allowance, with no payment method and no paid usage. |
+| 8 Nov 2026 | M4b includes the Worker-based banner expiry safety net, subject to CPU and browser testing. |
 | 6 Nov 2026 | M0 approved: local UI prototype with sample data only |
 | 6 Nov 2026 | Payment proofs: evaluate a private Supabase Storage bucket first, separate from public images, with no public URLs and access only for the relevant customer and authorised admins. No R2 or paid storage without separate approval. |
 | 6 Nov 2026 | Lightweight Shop by Aesthetic is in the launch plan, where actual products support it, using `collections` and `collection_products` |
@@ -335,7 +367,7 @@ The disposable test project and `deploy-test/` remain in place. Results so far a
 
 ## 8. After launch, in more detail
 
-1. Reusable collection manager, homepage and banner managers
+1. Reusable collection manager, promotional collection sections, and the creator and Instagram gallery sections, each hidden until real content is published. (The hero banner manager moved into the launch scope on 8 Nov.)
 2. Campaigns, discounts and coupons, using the manual publication rules
 3. Sales-ranked trending, using only qualifying orders
 4. Verified-purchase reviews with moderation, then saved addresses, a cart that follows the account, wishlist, and linking past guest orders to a verified email

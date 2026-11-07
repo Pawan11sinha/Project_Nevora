@@ -13,7 +13,7 @@ Status: product plan approved by the owner on 6 November 2026. **This describes 
 | Store location | A new `store/` folder. `deploy-test/` stays untouched. |
 | Range | Jewellery and hair accessories, as database categories |
 | Frontend | Next.js and TypeScript |
-| Hosting | Cloudflare Workers Free, subject to compatibility and production testing. The runtime (vinext or OpenNext) is undecided. Vercel Hobby won't be used for the production store, because Vercel limits it to non-commercial use. |
+| Hosting | Cloudflare Workers, with Workers Static Assets for static files and Cloudflare DNS and SSL for the custom domain (owner decision, 7 November 2026). OpenNext is the initial runtime; vinext is evaluated separately and isn't used without evidence and approval. Workers Free, subject to the CPU decision rule in section 4. Cloudflare Pages isn't used: its Next.js guide covers static exports only. Vercel Hobby won't be used for the production store, because Vercel limits it to non-commercial use. |
 | Database | A separate real Supabase project for the store, in Mumbai. The test project is never used for it. Free for building and rehearsals. Pro is budgeted before public launch, with no upgrade authorised. |
 | Authentication | Guest checkout, plus optional customer signup and login with Supabase email and password. Admin login is separate, under `/admin`, with mandatory TOTP MFA. |
 | Paid hosting | Up to about $5 a month is acceptable if Cloudflare Free fails the test, but only after the owner sees the results and cost and approves. Never upgraded automatically. |
@@ -53,7 +53,7 @@ private proofs
 
 ## 3. Deployment: vinext or OpenNext
 
-**Undecided.** Both get a compatibility assessment in Phase R, on the actual NÉVORA routes with Supabase authentication. Nothing is migrated or deployed without approval. Guidance was read on 6 November 2026.
+**OpenNext is the initial runtime (owner decision, 7 November 2026).** vinext is evaluated separately and isn't adopted without documented evidence and the owner's explicit approval. One reason it isn't first: under vinext, files in `public/` run the Worker, so every PIN code lookup would count against the daily request limit. Both still get the Phase R assessment on the actual NÉVORA routes with Supabase authentication. Nothing is migrated or deployed without approval. Guidance was read on 6 November 2026.
 
 | | vinext | OpenNext (`@opennextjs/cloudflare`) |
 |---|---|---|
@@ -67,6 +67,47 @@ private proofs
 **Decision tests, identical for both:** CPU on real routes with zero `exceededCpu` kills across at least 1,000 captured requests per critical route, login and cookie refresh, AAL2, server actions, caching, Worker size and cold start. Stage 4 results only cover OpenNext with the test app, so they can't decide this alone. Production use of vinext also needs documented evidence and the owner's explicit approval.
 
 **Stay portable.** App code uses only ordinary Next.js features: no PPR, no `"use cache"` and no native modules such as `sharp`. That keeps moving between adapters or hosts cheap.
+
+### Cloudflare configuration in `store/` (staging deployed 7 November 2026; production not deployed)
+
+The owner chose OpenNext on Workers for the initial deployment. The configuration in `store/` was first validated locally with `opennextjs-cloudflare preview`, then deployed, with the owner's approval of each step, to the **staging** Worker `nevora-store-staging` on its `workers.dev` address, behind the staging password gate described below. **Production isn't deployed:** there's no production Worker, route, custom domain or DNS change.
+
+| File | Purpose |
+|---|---|
+| `wrangler.jsonc` | **Staging only**: Worker `nevora-store-staging` on `workers.dev`. No routes, custom domain or production environment; those come in a separate, approved step. Static assets first (`run_worker_first` left at its default, false). Invocation logs off, because they record visitor IP addresses. |
+| `open-next.config.ts` | Read-only cache served from static assets. KV stays off. |
+| `custom-worker.ts`, `src/lib/staging-gate.ts`, `src/lib/url-guard.ts` | The staging password gate first, then 400 instead of Next.js's 500 for undecodable paths |
+| `public/_headers` | Headers for static files, which never run the Worker: nosniff, `Permissions-Policy: camera=(), microphone=(), geolocation=(self)`, `X-Robots-Tag: noindex`, a year's immutable cache for `/_next/static/*` and `/data/pin/v1/*`, UTF-8 for the PIN notice |
+| `next.config.ts` | The same security headers for Worker-generated pages, plus CSP, `X-Frame-Options: DENY` and HSTS at one day without `includeSubDomains`, raised only after the custom domain is verified |
+| `scripts/check-deploy.mjs` | Checks headers, file types, caching, that static files skip the Worker, all 900 PIN files, the URL guard and that private files aren't served. Takes `BASE_URL`. |
+
+Pinned versions: Next.js 16.4.5, `@opennextjs/cloudflare` 1.20.16 (which needs Next.js 16.4.5 or newer) and `wrangler` 4.158.0.
+
+**Local results:** **997 assets** would be uploaded: 998 files in `.open-next/assets` after OpenNext adds its 46 pre-rendered pages, minus `_headers`, which Wrangler parses but doesn't upload. That's 7.57 MB, with the largest file 316 KB, against the Free limits of 20,000 files and 25 MiB per file. Wrangler's "Read N files" message counts folders too, so it shows 1,045 (998 files and 47 folders). Worker upload 5,141 KiB, or 1,071 KiB compressed, from `wrangler deploy --dry-run`. All deployment and browser checks passed on the preview. These are local results, not Cloudflare measurements.
+
+**Never cached:** `src/lib/cache-policy.ts` lists the private routes (`/bag`, `/checkout`, and the planned `/account`, `/order`, `/admin` and `/api`), and `next.config.ts` sends `Cache-Control: no-store` for them and everything under them. This overrides Next.js's default one-year `s-maxage` on pre-rendered pages, under both `next start` and OpenNext, while the page is still served from OpenNext's cache at no extra CPU. A unit test fails if any route in `src/app` isn't classified as public or private.
+
+**Staging access: a password gate in the Worker (decided 7 November 2026).** Cloudflare Access was rejected: Zero Trust's Free checkout needs a card and a separate authorisation for usage charges, which the owner declined. Instead, `custom-worker.ts` checks a password before anything else runs (`src/lib/staging-gate.ts`):
+- The browser shows its own username and password box (HTTP Basic authentication over HTTPS). Only the password is checked.
+- The password is a Wrangler secret, `STAGING_PASSWORD`, set by the owner with `npx wrangler secret put`. It's never in code, Git or `wrangler.jsonc`. It's compared in constant time and removed from the request before Next.js sees it.
+- **It fails closed:** a deployed Worker without a password of at least 20 characters refuses everything with 503. Only the plain-HTTP `localhost` preview skips the gate.
+- **Limitation, accepted:** it protects everything the Worker serves (pages, in-app page loads, 404s), but static files are served before the Worker and stay reachable without the password: PIN data, build JavaScript, sample images, the favicon and `BUILD_ID`. None holds secrets or personal data. `/cdn-cgi/_next_cache/*`, which holds pre-rendered page HTML, returned 404 on Cloudflare, so it isn't reachable.
+- The check scripts read the password from the macOS Keychain (`nevora-staging-password`) or `STAGING_PASSWORD`, and send it only to `https://nevora-store-staging.<account>.workers.dev` (`scripts/lib/staging-auth.mjs`).
+- Deploy order: deploy 1 with `workers_dev: false`, so there's no address; set the secret; deploy 2 with `workers_dev: true`. Then `check-deploy` must see 401 on every Worker path before any other test.
+- Production has no gate; it's removed in the approved production step.
+
+**Known OpenNext difference:** a product URL with percent-encoded letters, such as `/products/sample-dome-jhumk%61`, returns 404 under OpenNext and 200 under `next start`. Browsers don't encode plain letters, so only hand-typed URLs are affected.
+
+**PIN data versioning:** `PIN_DATA_VERSION` in `src/lib/pincode.ts` names the folder `public/data/pin/<version>/`. Browsers cache it for a year, so `scripts/build-pin-data.mjs` refuses to change an existing version and writes nothing; it only confirms a byte-identical rebuild. New data means a new version and a matching `public/_headers` rule, which a unit test checks. The old folder is deleted one release later.
+
+**Verified on the staging Worker (7 November 2026, UTC), with the password gate on:**
+- **Gate:** without the password, all 9 Worker paths tested and a wrong password returned 401, before Next.js ran.
+- **Static files skip the Worker:** 48 static-file requests (PIN files with and without the password, the location file, a build file, images, the favicon, the notice, the manifest and `BUILD_ID`) produced **0 Worker invocations** in `wrangler tail`, while 10 page requests sent straight after produced exactly 10.
+- **Headers and files on Cloudflare:** `check-deploy` passed **38/38**. That covers the security headers and `geolocation=(self)`, `no-store` on the bag, checkout and planned private routes, the year-long cache on build files and PIN data, all 900 PIN prefix files, file types, the URL guard, and private files not being served.
+- **Browser checks over HTTPS:** **214/214** passed (address, including PIN auto-fill and "Use my current location", checkout, bag, pages, mobile and navigation), with 0 accessibility violations on 5 pages.
+- **`/cdn-cgi/_next_cache/*`:** **404** on Cloudflare. Locally the preview served it, so this is a difference between the local preview and Cloudflare.
+- **CPU, under the decision rule:** 6 routes (`/`, `/checkout`, `/bag`, a product page, a category page and the 404 page), each with 1,000 requests **paced** (one at a time, 200 ms apart) and 1,000 **sustained** (5 at a time): 12,000 in total. **All 12,000 got the expected response, with 0 CPU-limit kills.** `wrangler tail` sampled 26% of paced and 4% of sustained requests, with **0 `exceededCpu` events**. Normal pages used 1–3 ms (p50), with occasional successful spikes of 10–21 ms. The 404 page, which Next.js renders on demand, was the weak spot under sustained load: p95 95 ms and a maximum of 106 ms in the sample, with no kills. The run used about 12,500–12,700 Worker requests by the scripts' count, not Cloudflare's dashboard.
+- **What this doesn't cover:** these are the current pre-rendered pages with sample data. Order saving, account and admin pages aren't built, and each needs the same 1,000-request run before launch. Workers Free is suitable for the current pages; it isn't yet established for future dynamic routes.
 
 **`proxy.ts`, not `middleware.ts` (decided 5 November 2026).** Next.js 16 says `middleware.ts` "is deprecated and will be removed in a future version", and Supabase's guide is built around `proxy.ts`. OpenNext warns that its Node.js proxy support is experimental, though it's merging fixes for it. So `proxy.ts` only refreshes sessions and redirects, and every page and action checks the session and role itself. If `proxy.ts` proves unreliable on Workers, the fallback must be chosen then, with evidence.
 
