@@ -3,9 +3,14 @@ import { stagingFetch, launchBrowser } from "./lib/staging-auth.mjs";
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 let failed = 0;
 const check = (name, pass, detail = "") => { console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`); if (!pass) failed++; };
-for (const [path, status] of [["/", 200], ["/categories/jewellery", 200], ["/categories/jewellery/earrings", 200], ["/categories/hair-accessories/claw-clips", 200], ["/collections/korean-edit", 200], ["/collections/coquette-edit", 200], ["/collections/minimal-edit", 200], ["/collections/under-299", 200], ["/collections/under-499", 200], ["/collections/new-arrivals", 200], ["/collections/trending", 200], ["/products/sample-dome-jhumka", 200], ["/info/shipping", 200], ["/bag", 200],["/categories/jewellery/anklets", 404], ["/collections/festive-edit", 404], ["/collections/gift-box", 404], ["/products/nope", 404], ["/categories/nope", 404]]) {
+for (const [path, status] of [["/", 200], ["/categories/jewellery", 200], ["/categories/jewellery/earrings", 200], ["/categories/hair-accessories/claw-clips", 200], ["/collections/korean-edit", 200], ["/collections/coquette-edit", 200], ["/collections/minimal-edit", 200], ["/collections/under-299", 200], ["/collections/under-499", 200], ["/collections/new-arrivals", 200], ["/collections/trending", 200], ["/products/sample-dome-jhumka", 200], ["/info/shipping", 200], ["/bag", 200],["/categories/jewellery/anklets", 404], ["/products/nope", 404], ["/categories/nope", 404]]) {
   const r = await stagingFetch(base + path);
   check(`${path} returns ${status}`, r.status === status, `status=${r.status}`);
+}
+// Empty features (Festive Edit, Gift Box) redirect to the homepage rather than 404 (src/lib/features.ts, decided 8 Nov).
+for (const path of ["/collections/festive-edit", "/collections/gift-box"]) {
+  const r = await stagingFetch(base + path, { redirect: "manual" });
+  check(`${path} redirects to the homepage`, r.status === 307 && new URL(r.headers.get("location") ?? "", base).pathname === "/", `${r.status} ${r.headers.get("location")}`);
 }
 const browser = await launchBrowser();
 const page = await (await browser.newContext({ viewport: { width: 360, height: 740 } })).newPage();

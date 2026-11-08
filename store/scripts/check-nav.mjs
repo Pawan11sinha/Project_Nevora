@@ -39,7 +39,7 @@ await m.waitForTimeout(150);
 check("mobile menu opens", await m.getByRole("dialog", { name: "Menu" }).isVisible());
 await m.getByRole("dialog", { name: "Menu" }).getByText("Jewellery", { exact: true }).click();
 await m.waitForTimeout(150);
-check("mobile group expands", await m.getByRole("link", { name: "All Jewellery" }).isVisible());
+check("mobile group expands", await m.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: "All Jewellery" }).isVisible());
 await m.screenshot({ path: new URL("menu-open-mobile.png", out).pathname });
 const small = await m.evaluate(() => [...document.querySelectorAll("dialog a, dialog summary, dialog button")].filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).length);
 check("mobile tap targets are at least 44px high", small === 0, `${small} too small`);
