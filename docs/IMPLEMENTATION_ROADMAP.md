@@ -2,9 +2,13 @@
 
 Status: product plan approved by the owner on 6 November 2026. **Approval covers the plan only.** Nothing here authorises SQL, Supabase schema changes, creating or deleting users or orders, Cloudflare changes, secret or environment changes, a GitHub push or a paid upgrade. Each of those, and the start of implementation, needs separate approval. Approving a phase or this plan authorises none of the actions in section 6.
 
-**Target: public launch in the week of 11 January 2027.** The 1 December date is withdrawn. Payment security, inventory accuracy and checkout functionality won't be compromised to meet a date.
+**Target: public launch indicatively in the week of 1 February 2027, to be re-baselined after Phase C.** The original target was the week of 11 January 2027; bringing M3b, M4b and M4c into the launch scope on 8 November moved it, as the notes below explain. The 1 December date is withdrawn. Payment security, inventory accuracy and checkout functionality won't be compromised to meet a date.
 
 **8 November 2026: bringing the hero banner manager forward adds 6–9 working days (M3b and M4b below).** At the upper estimates, launch moves about two weeks later than the January week, so roughly the week of 25 January 2027. That's indicative only: all dates from M2 onwards are still re-baselined after Phase C.
+
+**8 November 2026, later: the product browsing enhancements (M4c) add 3–5 more working days,** so 9–14 in total. At the upper estimates that's roughly the week of 1 February 2027, again indicative and re-baselined after Phase C.
+
+**8 November 2026, later still: homepage content P0 (2–3 working days, indicative). Built and accepted by the owner on 8 November, on local sample files only; not yet deployed to staging.** A shared feature-availability mechanism, a restructured footer, an FAQ page with only confirmed answers, Privacy and Terms placeholders, a collections index, and a preview-only design prototype of promotional collection cards, all on local files with no database or admin. At the upper estimate this may push launch into the following week; still re-baselined after Phase C. Admin-managed promotional cards and FAQs come with M3 and M4b; coupons and offers stay in M11.
 
 ## 1. Launch scope
 
@@ -21,9 +25,10 @@ Status: product plan approved by the owner on 6 November 2026. **Approval covers
 - Manual shipping, and essential cancellation, return and refund handling
 - Manually curated Trending Now
 - Lightweight Shop by Aesthetic (Korean Edit, Coquette Edit, Minimal Edit, Under ₹299, Under ₹499), where actual products support each one
-- **Homepage hero banner manager** (brought forward by the owner on 8 November 2026): multiple campaign banners with separate desktop and mobile images, a title, an optional subtitle, and button text with an admin-chosen destination (an existing category, subcategory, product or collection, or a NÉVORA link), ordered and shown as a carousel when several are live. Published manually; an end date hides a banner automatically; start dates never publish. The existing NÉVORA hero is the fallback. No countdown timers.
+- **Homepage hero banner manager** (brought forward by the owner on 8 November 2026): a full-width promotional carousel of up to 3 live campaign banners (for example Diwali, Valentine's Day, Raksha Bandhan, Christmas, the wedding season, New Arrivals or a genuine offer), each with separate desktop and mobile images, a heading, a short description and button text, the whole banner linking to an admin-chosen destination (an existing category, subcategory, product or collection, or a NÉVORA link). Slides fade every 5 seconds, with pause, previous, next and slide indicators. Published manually; an end date hides a banner automatically; start dates are informational and never publish. The existing NÉVORA hero is the fallback. No countdown timers, fake discounts or artificial urgency.
+- **Product browsing enhancements** (brought forward by the owner on 8 November 2026, M4c): genuine pricing on product cards and pages (MRP struck through next to the selling price, with a discount badge calculated automatically and rounded down, shown only where MRP is genuinely higher; "From ₹X" when finishes have different prices, using the lowest active price); Add to Bag on product cards, with a finish chooser for products with more than one finish (never an arbitrary finish); a second product image on desktop hover; a **local-only wishlist** (heart on product cards, a Favourites page and header link, saved in the browser, with no login or database); and **local-only Recently Viewed** (the latest 8 product pages, newest first, no duplicates, shown on the homepage only when there are any). No Buy 2 Get 1 or other campaign badges: those are M11.
 
-**Later:** COD and COD remittance reconciliation, payment gateways, automated verification and refunds, courier APIs and tracking, multi-order receipt allocation, advanced campaigns, sales-ranked trending, a reusable collection manager with promotional collection sections, the creator ("Loved by Creators") and Instagram gallery sections, verified-purchase reviews, the AI shopping assistant, loyalty and advanced personalisation.
+**Later:** COD and COD remittance reconciliation, payment gateways, automated verification and refunds, courier APIs and tracking, multi-order receipt allocation, advanced campaigns, sales-ranked trending, a reusable collection manager with promotional collection sections, the creator ("Loved by Creators") and Instagram gallery sections, verified-purchase reviews, an account-synced wishlist, Buy 2 Get 1 and other promotional offers (M11), the AI shopping assistant, loyalty and advanced personalisation.
 
 ## 2. Timeline
 
@@ -37,16 +42,17 @@ All estimates are working days of building and review, on a five-day week, and h
 | **M3. Catalogue and admin** | Admin login, products, variants, categories, stock, image uploads | 4–5 | 19–25 Nov | M2, storage decision (Supabase Storage proposed, since R2 isn't approved), domain |
 | **M3b. Publish pipeline** | Private GitHub repo and CI; "Publish" in admin starts a rebuild and deploy (Option A, live in about 3–5 minutes); a Worker cron trigger rebuilds when a banner's end date passes; published images copied into static assets at build | 2–3 | To be re-baselined | M2 Phase F (GitHub), a Cloudflare API token and GitHub token, each approved |
 | **M4. Storefront** | Navigation, home, listing, search, filters, product pages, lightweight Shop by Aesthetic | 5–6 | 26 Nov–3 Dec | M0, M3 |
-| **M4b. Hero banner manager** | `homepage_banners`, admin screens with preview and destination checks, homepage carousel with the NÉVORA hero as fallback | 4–6 | To be re-baselined | M3, M3b, M4 |
+| **M4b. Hero banner manager** | `homepage_banners`, admin screens with preview and destination checks, full-width homepage carousel (up to 3 live slides, 5-second fades) with the NÉVORA hero as fallback. **A visual prototype with labelled sample banners on password-protected staging comes first** (approved 8 Nov), for the owner's design approval before the backend and admin work. | 4–6 | To be re-baselined | Prototype: none. Full M4b: M3, M3b, M4 |
+| **M4c. Product browsing enhancements** | Genuine MRP and discount display, card Add to Bag with finish chooser, second image on hover, local wishlist and Favourites page, local Recently Viewed. **Built first on sample data** (approved 8 Nov), then wired to real variants and images in M4. | 3–5 | To be re-baselined | Sample-data version: none. Real data: M3 (variant MRP and price, image order), M4 |
 | **M5. Checkout, payments, accounts** | Cart, checkout, manual UPI/QR, references, payment proof, verification, accounts, emails | 6–8 | 4–15 Dec | M4, Resend, UPI details |
 | **M6. Order operations** | Manual shipping, cancellation, refunds, returns, inventory reconciliation | 3–4 | 16–21 Dec | M5, courier choice, policies, lost-parcel policy |
 | **M7. Manual trending and real catalogue** | Trending manager, real products and photos | 1–2 | 22–23 Dec | Stock and photos |
 | **M8. Hardening** | Security checks, backup restore, CPU rule on real routes, accessibility, SEO | 4–5 | 24–30 Dec | M5–M7 |
 | **M9. Private pilot** | A small group places real prepaid orders, including refunds, a return and an undelivered parcel | 3–5 | 31 Dec–6 Jan | M8, GST and legal review |
 | **Buffer** | Fixes from the pilot, and year-end delays | 2+ | 7–8 Jan | |
-| **Public launch** | | | **Week of 11 Jan 2027** | All above, plus owner's go-ahead |
+| **Public launch** | | | **Indicatively the week of 1 Feb 2027** (originally the week of 11 Jan), to be re-baselined after Phase C | All above, plus owner's go-ahead |
 
-**Total:** to be recalculated after Phase C. The earlier total of 29–40 working days assumed 2–3 days for M2. M3b and M4b add 6–9 working days.
+**Total:** to be recalculated after Phase C. The earlier total of 29–40 working days assumed 2–3 days for M2. M3b and M4b add 6–9 working days, and M4c adds 3–5.
 
 ### M2 phases
 
@@ -100,9 +106,9 @@ Migrations are versioned. A migration counts as **applied** once it's committed 
 | Milestone | Delivers | Days |
 |---|---|---|
 | M10 | Reusable collection manager, promotional collection sections, and the creator and Instagram gallery sections (images first, with videos linking to Instagram) | 5–8 |
-| M11 | Campaigns, discounts and coupons, aiming to finish before Valentine's Day 2027 | 5–7 |
+| M11 | Campaigns, discounts and coupons, including **Buy 2 Get 1** (admin-selected eligible products, active status and validity, the badge only on eligible products, and the bag and server checking eligibility and applying the free item), aiming to finish before Valentine's Day 2027 | 5–7 |
 | M12 | Sales-ranked trending, once enough real sales exist | 3–4 |
-| M13 onwards | Verified reviews, saved addresses, wishlist, Razorpay, automated WhatsApp, AI assistant, loyalty, personalisation | Not estimated |
+| M13 onwards | Verified reviews, saved addresses, an account-synced wishlist (merging the local favourites after sign-in), Razorpay, automated WhatsApp, AI assistant, loyalty, personalisation | Not estimated |
 
 ### What could move the dates
 
@@ -185,11 +191,19 @@ Phase C must include these tests. **None has been executed.** Hosted tests need 
 - A failed build leaves the live site unchanged, and the admin sees that it failed.
 
 **M4b. Hero banner manager**
-- Admin creates, edits, previews, orders, publishes, unpublishes and deletes banners without code changes.
-- A banner appears only after it's published, and never before. Start dates never publish anything.
-- Publishing is refused if a destination doesn't exist or isn't active, if either image or the alt text is missing, or if the end date has passed.
-- Desktop and mobile images are both used, and the button works by click, tap and keyboard.
-- With no live banner, the existing NÉVORA hero shows. No countdowns, invented urgency or unverified claims.
+- **Design first:** a visual prototype of the carousel, using clearly labelled sample banners from a local file (no database or admin), is reviewed on password-protected staging and approved by the owner before the backend and admin work starts.
+- Admin creates, edits, previews, orders, publishes, unpublishes and deletes banners without code changes. Each banner has an internal campaign name, a heading, a short description, button text, a destination, a desktop image and a mobile image (each with alt text), an informational start date and time, an end date and time, and a display order.
+- A banner appears only after the admin clicks Publish, and never before. **Start dates never publish anything:** they're informational, and admin shows a warning when publishing a banner whose start date is still in the future. An end date hides the banner automatically.
+- Publishing is refused if a destination doesn't exist or isn't active, if either image or its alt text is missing, if the end date has passed, or if 3 banners are already live.
+- **Full-width homepage promotional carousel** with at most **3 live slides**, in the admin's display order. Fixed image proportions, so nothing shifts as images load.
+- **Smooth fade transitions** and **automatic rotation every 5 seconds**.
+- **Pause, previous and next controls, and slide indicators** showing the current slide. Rotation also pauses on hover, on keyboard focus and when the tab is hidden.
+- **The entire banner is one link** to its configured category, subcategory, collection, product or NÉVORA page, and the button text sits inside it. The carousel controls sit outside the link, so they never open it. It works by click, tap and keyboard on desktop and mobile.
+- **Heading, description and button text** are real text, not part of the image, and stay legible over any photo. Gold stays decorative only.
+- **Separate desktop and mobile images**, chosen by screen size. Only the first slide's image loads immediately; the others load lazily.
+- **Accessibility and reduced motion:** the pause control meets WCAG 2.2.2, controls have clear labels, and visitors who prefer reduced motion see no automatic rotation and no fade. Without JavaScript the slides show as a swipeable row, so no content stays hidden. Axe checks show no violations.
+- **Offers:** an offer banner is allowed only for a genuine offer on real products at their actual prices. No fake discounts, misleading claims or artificial urgency. Discounts and coupons themselves stay in M11, after launch.
+- With no live banner, the existing NÉVORA hero shows. No countdowns, invented urgency or unverified claims (such as waterproof or anti-tarnish without supplier evidence and owner approval).
 - The homepage stays pre-rendered: no Supabase query per visit.
 - **Expiry safety net:** each banner's end time is written into the pre-rendered homepage, and `custom-worker.ts` removes expired banners while serving `/` (Cloudflare's streaming HTML rewriter), revealing the NÉVORA fallback hero if none remain. End dates therefore take effect even if GitHub Actions is blocked or Supabase is paused. It needs no JavaScript, and must pass the CPU rule on `/` and the browser checks before it's relied on.
 
@@ -197,6 +211,15 @@ Phase C must include these tests. **None has been executed.** Hosted tests need 
 - All product data, prices, stock and categories come from the database.
 - Search and filters work on real data, and their CPU is measured.
 - Repeat catalogue views don't query Supabase, and pages show no invented ratings, counts or urgency.
+
+**M4c. Product browsing enhancements** (sample data first, then real data in M4)
+- **Pricing:** one shared function works out the discount as ((MRP − selling price) ÷ MRP) × 100, **rounded down**. The badge and struck-through MRP appear only when MRP is genuinely higher and the result is at least 1%. Nothing is hard-coded. A selling price above MRP is rejected (by the database rule and the admin form in M3). When finishes have different prices the card shows "From ₹X", using the lowest active price.
+- **Card Add to Bag:** a button beside the card link, never inside it. Single-finish products add directly. Multi-finish products open a small finish chooser, and nothing is added until a finish is chosen. It reuses the existing bag (`addToBag`), so the header count updates at once and prices still come from the catalogue. It shows the same messages as the product page ("Added …", View bag, limit, bag full), and it's disabled when sold out. No payment or order submission.
+- **Second image:** on desktop hover the card fades to a second image, and back on mouse leave. Touch screens keep normal tap-to-open behaviour. It respects reduced motion and doesn't shift the layout.
+- **Wishlist (local only):** a heart on each card's image adds or removes the product, with a clear label and pressed state. Favourites are saved in the browser's local storage, survive refreshes and sync across tabs. A Favourites page and header link are added. There's no login, database or server request. Missing or archived products drop out quietly.
+- **Recently Viewed (local only):** opening a product page records it in the browser: the latest 8, newest first, no duplicates. The homepage section appears only when there are any, below the fold so it doesn't shift the layout, and each card opens its product page. Nothing is sent to the server.
+- **No Buy 2 Get 1 or other campaign badges, and no ratings,** until M11 campaigns and verified reviews exist.
+- Unit tests for the pricing function and the local stores, browser checks for every behaviour, no accessibility violations, and the JavaScript size of listing pages measured.
 
 **M5. Checkout, payments, accounts**
 - Manual UPI works from cart to confirmed on real Android and iPhone devices.
@@ -330,6 +353,20 @@ Items 35–43 are findings from the 6 November schema audit, recorded here on 7 
 | 8 Nov 2026 | Supabase Free for development and the private pilot, with keep-alive, encrypted daily backups and a restore drill. The production database plan (Free with accepted risks, or a paid plan) is decided at the M8–M9 gate. |
 | 8 Nov 2026 | GitHub Actions stays within the included Free allowance, with no payment method and no paid usage. |
 | 8 Nov 2026 | M4b includes the Worker-based banner expiry safety net, subject to CPU and browser testing. |
+| 8 Nov 2026 | M4b hero: full-width promotional carousel, at most 3 live slides, fade transitions, automatic rotation every 5 seconds, pause, previous, next and slide indicators, the whole banner clickable, heading, description and button text, separate desktop and mobile images, accessibility and reduced-motion support. |
+| 8 Nov 2026 | Banner start dates stay informational, with a warning when publishing ahead of them; only the admin's Publish click makes a banner live. Offer banners only for genuine offers on real products at actual prices. |
+| 8 Nov 2026 | Early visual prototype of the hero carousel approved, with clearly labelled sample banners on password-protected staging, for design approval before the backend and admin work. This is a deliberate exception to building in roadmap order. |
+| 8 Nov 2026 | Product browsing enhancements (M4c) brought into the launch scope: a local-only wishlist with a Favourites page (moved forward from M13), local-only Recently Viewed (8 products), card Add to Bag with a finish chooser for multi-finish products, a second image on hover, and genuine MRP pricing. Built on sample data first, in this order: pricing, card Add to Bag, second image, wishlist, Recently Viewed. |
+| 8 Nov 2026 | Pricing display: MRP struck through and an automatically calculated discount rounded down, only where MRP is genuinely higher; "From ₹X" for different finish prices. The MRP display question is added to `CA_LEGAL_REVIEW.md`, and no legal compliance is claimed until it's answered. |
+| 8 Nov 2026 | Regular price discounts and promotional offers stay separate. Buy 2 Get 1 is an admin-controlled M11 campaign on individually selected products; no product shows it by default, and the prototype shows no such badge. |
+| 8 Nov 2026 | Homepage content P0 approved, and only P0: feature-availability mechanism, footer restructure, FAQ page, Privacy and Terms placeholders, collections index, preview-only promotional cards. No migrations, admin screens, coupon validation, newsletter or bundle purchasing. |
+| 8 Nov 2026 | Feature states: draft, planned, active, disabled. Planned features appear only in the admin (for now, design) preview, never to customers. Active features open their real destination, and only while it has real content. URLs of planned, disabled or empty features redirect to the homepage as a safety fallback; other unknown URLs stay 404. One shared module (`src/lib/features.ts`) decides this. |
+| 8 Nov 2026 | Offers show a static, truthful end date and time ("Ends 14 Feb 2027, 11:59 pm IST") where one applies. No ticking countdowns. Coupons and offers stay in M11, separate from Buy 2 Get 1, with server-side validation in `create_order` when built. |
+| 8 Nov 2026 | Footer: Shop, Explore, Help and Company groups, each link only to a real page. "Trending" instead of "Bestsellers" (no sales claims before M12). Gift Sets, Mix & Match and Order Help stay out until they exist. Privacy and Terms placeholders and a collections index added. |
+| 8 Nov 2026 | FAQs publish only answers backed by a recorded decision: placing an order (prepaid UPI) and Cash on Delivery (not offered). Delivery, returns, care and contact stay unpublished drafts until the courier, the return policy and CA review, supplier care guidance, and the WhatsApp number and domain email exist. |
+| 8 Nov 2026 | `/design/promotions` is a development preview only, not an admin screen or a substitute for one. It's removed or moved behind the real admin login (AAL2) before public launch; this is a go-live check in `SECURITY_PLAN.md`. Sample promotional cards are marked `sample` and can never be shown to customers, whatever their status or dates. Privacy and Terms stay visibly marked "Placeholder · Not final", with no legal effect, until a lawyer or CA approves the final text. The order-placement FAQ describes the manual UPI flow: no payment gateway, UPI ID and QR on the order page, UTR reference, optional WhatsApp help, and confirmation only after manual bank verification. |
+| 8 Nov 2026 | **P0 accepted by the owner.** Verified on the OpenNext production build (local preview): typecheck, lint, 115 unit tests, all browser checks and axe with no violations. Acceptance covers the sample-data prototype only. Its go-live items stay open in `SECURITY_PLAN.md`: development preview routes removed or behind admin login, no sample content in production, and final Privacy and Terms text. Worker CPU for these pages hasn't been measured on a deployed Worker yet. |
+| 8 Nov 2026 | Newsletter: no Subscribe button until the domain, Resend, double opt-in, unsubscribe and the CA's DPDP answer (5.4) are in place. Marketing consent stays a separate, unticked choice. |
 | 6 Nov 2026 | M0 approved: local UI prototype with sample data only |
 | 6 Nov 2026 | Payment proofs: evaluate a private Supabase Storage bucket first, separate from public images, with no public URLs and access only for the relevant customer and authorised admins. No R2 or paid storage without separate approval. |
 | 6 Nov 2026 | Lightweight Shop by Aesthetic is in the launch plan, where actual products support it, using `collections` and `collection_products` |
@@ -368,9 +405,9 @@ The disposable test project and `deploy-test/` remain in place. Results so far a
 ## 8. After launch, in more detail
 
 1. Reusable collection manager, promotional collection sections, and the creator and Instagram gallery sections, each hidden until real content is published. (The hero banner manager moved into the launch scope on 8 Nov.)
-2. Campaigns, discounts and coupons, using the manual publication rules
+2. Campaigns, discounts and coupons, using the manual publication rules, including Buy 2 Get 1 on admin-selected eligible products
 3. Sales-ranked trending, using only qualifying orders
-4. Verified-purchase reviews with moderation, then saved addresses, a cart that follows the account, wishlist, and linking past guest orders to a verified email
+4. Verified-purchase reviews with moderation, then saved addresses, a cart that follows the account, an account-synced wishlist (merging the local favourites), and linking past guest orders to a verified email
 5. COD, with COD remittance reconciliation, and Razorpay
 6. WhatsApp Business Platform for order updates and consented abandoned-cart messages, plus mobile OTP after checking TRAI/DLT rules
 7. Courier integration and tracking, automated refunds, and marketplace sync

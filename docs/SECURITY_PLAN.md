@@ -353,3 +353,6 @@ The full question list is in `CA_LEGAL_REVIEW.md`.
 - [ ] MFA is on for all service accounts
 - [ ] Encrypted backup and restore tested on the hosted platform, including Auth users, identities and MFA factors
 - [ ] `r2.dev` access is off, and CORS is limited
+- [ ] Development preview routes (`/design`, including `/design/promotions`) are removed, or moved behind the real admin login with AAL2. They have no authentication of their own, are not admin screens and must never stand in for one. Until launch they're reachable only on local builds and the password-protected staging Worker.
+- [ ] No sample content (products, banners, announcements, promotional cards, FAQs marked draft) is reachable on the production storefront
+- [ ] Privacy Policy and Terms & Conditions contain final text approved by a lawyer or CA, replacing the "Placeholder · Not final" pages

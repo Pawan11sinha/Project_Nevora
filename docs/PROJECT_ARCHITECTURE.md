@@ -203,6 +203,8 @@ Screenshots can be faked, so a proof is evidence for the admin and never a payme
 
 **Navigation (plan):** New Arrivals, Categories, Trending, Shop by Aesthetic, Festive Edit, Gift Box, More, read from the database. A section with nothing real in it stays hidden, and no empty or fake collections are created. Categories support subcategories.
 
+**Feature availability (decided 8 Nov 2026):** every storefront feature has one state (draft, planned, active or disabled) in `src/lib/features.ts`, moving to the database with the admin foundation. Navigation, the footer and promotional cards ask that module whether a feature is available and which URL to use; no component writes its own rule. An active feature is available only while it has real content. The URL of an unavailable feature redirects to the homepage, temporarily (307), from a pre-rendered page, so it costs no Supabase query. Planned features appear only in the admin preview. Promotional cards, like banners, publish manually: start dates never publish, end dates hide them, and end dates show as static text, never as a countdown.
+
 **Shop by Aesthetic (lightweight, launch plan):** Korean Edit, Coquette Edit, Minimal Edit, Under ₹299 and Under ₹499, each included only if actual products support it. The edits use small `collections` and `collection_products` tables, and the price pages filter on the real price. The collection manager screen stays after launch.
 
 **Honest merchandising:** real stock status, real end dates, and no ratings until real reviews exist. No invented sales, popularity or urgency claims.

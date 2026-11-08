@@ -81,3 +81,4 @@ Questions:
 | 5.4 | DPDP: what duties apply to a small business, from when, and what must the privacy notice and consent say? | |
 | 5.5 | Is a personal UPI ID acceptable, or is a business or merchant ID needed? | |
 | 5.6 | Is ₹1,200 a realistic compliance budget? | |
+| 5.7 | Product cards and pages plan to show the MRP struck through next to a lower selling price, with a discount percentage worked out from the two and rounded down. For artificial jewellery and hair accessories: what makes an MRP genuine enough to show this way (for example, it must match the declared MRP on the pack), what records should support it, and are there Consumer Protection or Legal Metrology rules on "was/now" pricing and discount claims? | |
