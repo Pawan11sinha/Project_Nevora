@@ -43,6 +43,7 @@ for (const [text, background, minimum] of [
   ["ink-soft", "cream", 4.5],
   ["gold-deep", "ivory", 4.5],
   ["gold-deep", "cream", 4.5],
+  ["ivory", "espresso-deep", 4.5],
   ["control", "ivory", 3],
 ]) {
   test(`${text} on ${background} reaches ${minimum}:1`, () => {

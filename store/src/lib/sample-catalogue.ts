@@ -8,6 +8,13 @@ export type Product = {
   name: string;
   subcategory: string;
   pricePaise: number;
+  /** SAMPLE MRP, for the discount display prototype. Optional; never below the selling price (see lib/pricing.ts). */
+  mrpPaise?: number;
+  /**
+   * SAMPLE: whether a second, close-up image exists (public/sample/detail/<art>.svg), shown on desktop hover.
+   * In the real store this is the product's second image by sort order (product_images.sort_order = 1).
+   */
+  hasDetailImage: boolean;
   material: string;
   description: string;
   finishes: string[];
@@ -62,25 +69,28 @@ const p = (slug: string, name: string, subcategory: string, rupees: number, art:
   material: "Sample material. Real material details are confirmed with the supplier.",
   description: "Sample description for the prototype. Real product details, dimensions and care notes replace this.",
   finishes: ["Gold tone"],
+  hasDetailImage: true,
   ...extra,
 });
 
+// Sample MRPs on a few products show each pricing rule: a genuine discount (30%, 30%, 20%, 15%), a discount that
+// rounds down to 0% and so isn't shown (₹199 against ₹200), and an MRP equal to the price (not shown). Sample only.
 export const PRODUCTS: Product[] = [
   p("sample-dome-jhumka", "Dome Jhumka", "jhumkas-chandbalis", 249, "jhumka", [], { finishes: ["Oxidised silver tone", "Gold tone"], isNew: true, pickLabel: "Editor's Pick" }),
-  p("sample-pearl-chandbali", "Pearl Chandbali", "jhumkas-chandbalis", 349, "chandbali", ["coquette-edit"], { isNew: true }),
+  p("sample-pearl-chandbali", "Pearl Chandbali", "jhumkas-chandbalis", 349, "chandbali", ["coquette-edit"], { isNew: true, mrpPaise: 49900 }),
   p("sample-everyday-hoop", "Everyday Hoop", "hoops-studs", 229, "hoop", ["minimal-edit", "korean-edit"], { finishes: ["Gold tone", "Silver tone"], pickLabel: "Editor's Pick" }),
   p("sample-pearl-stud", "Pearl Stud", "hoops-studs", 179, "stud", ["minimal-edit", "coquette-edit", "korean-edit"], { isNew: true }),
-  p("sample-drop-earring", "Soft Drop Earring", "earrings", 279, "stud", ["coquette-edit"]),
+  p("sample-drop-earring", "Soft Drop Earring", "earrings", 279, "stud", ["coquette-edit"], { mrpPaise: 34900 }),
   p("sample-fine-pendant", "Fine Pendant Necklace", "necklaces", 329, "necklace", ["minimal-edit"], { isNew: true, pickLabel: "Editor's Pick" }),
-  p("sample-layered-chain", "Layered Pearl Chain", "necklaces", 449, "layered", ["korean-edit", "coquette-edit"]),
+  p("sample-layered-chain", "Layered Pearl Chain", "necklaces", 449, "layered", ["korean-edit", "coquette-edit"], { mrpPaise: 64900 }),
   p("sample-solitaire-ring", "Solitaire Ring", "rings", 199, "ring", ["minimal-edit"], { finishes: ["Gold tone", "Silver tone"] }),
   p("sample-charm-bracelet", "Charm Bracelet", "bracelets", 279, "bracelet", ["coquette-edit"], { soldOut: true }),
   p("sample-matte-claw", "Matte Claw Clip", "claw-clips", 169, "claw", ["minimal-edit", "korean-edit"], { finishes: ["Taupe", "Espresso", "Cream"], isNew: true, pickLabel: "Editor's Pick" }),
   p("sample-large-claw", "Large Claw Clip", "claw-clips", 199, "claw", ["minimal-edit"], { finishes: ["Taupe", "Espresso"] }),
-  p("sample-pearl-clip", "Pearl Bar Clip", "korean-hair-clips", 149, "clip", ["korean-edit", "coquette-edit"], { isNew: true }),
-  p("sample-satin-scrunchie", "Satin Scrunchie Set", "scrunchies", 169, "scrunchie", ["korean-edit"], { finishes: ["Blush", "Taupe"] }),
-  p("sample-ribbon-bow", "Ribbon Hair Bow", "hair-bows", 149, "bow", ["coquette-edit"], { pickLabel: "Editor's Pick" }),
-  p("sample-soft-headband", "Soft Padded Headband", "headbands", 199, "headband", ["korean-edit", "minimal-edit"]),
+  p("sample-pearl-clip", "Pearl Bar Clip", "korean-hair-clips", 149, "clip", ["korean-edit", "coquette-edit"], { isNew: true, mrpPaise: 14900, hasDetailImage: false }),
+  p("sample-satin-scrunchie", "Satin Scrunchie Set", "scrunchies", 169, "scrunchie", ["korean-edit"], { finishes: ["Blush", "Taupe"], mrpPaise: 19900 }),
+  p("sample-ribbon-bow", "Ribbon Hair Bow", "hair-bows", 149, "bow", ["coquette-edit"], { pickLabel: "Editor's Pick", hasDetailImage: false }),
+  p("sample-soft-headband", "Soft Padded Headband", "headbands", 199, "headband", ["korean-edit", "minimal-edit"], { mrpPaise: 20000 }),
 ];
 
 export const COLLECTIONS: Collection[] = [

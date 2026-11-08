@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/catalogue/ProductCard";
+import { PriceComparison } from "@/components/catalogue/PriceComparison";
 import { ProductImage } from "@/components/catalogue/ProductImage";
 import { AddToBag } from "@/components/product/AddToBag";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { FavouriteButton } from "@/components/wishlist/FavouriteButton";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRODUCTS, categoryOf, findProduct, formatPrice, productsInSubcategory, subcategoryName } from "@/lib/sample-catalogue";
 
@@ -38,10 +40,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <div className={product.soldOut ? "opacity-70" : ""}>
           <ProductImage art={product.art} alt={`${product.name}, sample image`} priority sizes="(min-width: 768px) 50vw, 100vw" />
         </div>
-        <div className="md:sticky md:top-28 md:self-start">
+        <div className="relative md:sticky md:top-28 md:self-start">
+          {/* The heart sits at the top right of this column, so the title and price lines stay together. */}
+          <FavouriteButton slug={product.slug} name={product.name} size="page" className="absolute right-0 top-0" />
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-deep">{subcategoryName(product.subcategory)}</p>
-          <h1 className="mt-2 font-serif text-title font-medium leading-[1.05]">{product.name}</h1>
+          <h1 className="mt-2 pr-14 font-serif text-title font-medium leading-[1.05]">{product.name}</h1>
           <p className="mt-3 text-xl font-medium">{formatPrice(product.pricePaise)}<span className="ml-2 align-middle text-xs font-normal text-ink-soft">Sample price</span></p>
+          {/* MRP and discount sit in their own line, after the selling price, so the price line is the selling price only. */}
+          <PriceComparison pricePaise={product.pricePaise} mrpPaise={product.mrpPaise} className="mt-1 text-sm" />
           <p className="mt-2 text-sm font-medium">{product.soldOut ? "Sold out" : "In stock"}</p>
           {/* The bag lives in the browser. Checkout, which will recalculate prices on the server, isn't built yet. */}
           <AddToBag slug={product.slug} name={product.name} finishes={product.finishes} soldOut={product.soldOut} />

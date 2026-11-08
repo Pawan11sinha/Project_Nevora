@@ -13,6 +13,8 @@
   --color-ink-soft: #6a574c;
   --color-gold-deep: #7b5e2b;
   --color-control: #8a7668;
+  /* A slightly darker espresso, for the hover state of product-card buttons. Not a new colour. */
+  --color-espresso-deep: #241a15;
 
   --font-serif: var(--font-cormorant);
   --font-sans: var(--font-manrope);
@@ -69,4 +71,19 @@ body {
       from { opacity: 0; transform: translateY(14px); }
     }
   }
+}
+
+/* Announcement ticker: the track moves left by half its width, where the repeated copy begins, so the loop is seamless.
+   The duration is set from the measured width (AnnouncementBar.tsx). It only runs after JavaScript, and never by default
+   for reduced-motion visitors. */
+@keyframes ticker {
+  to { transform: translateX(-50%); }
+}
+/* Longhands, not the shorthand: this rule sits outside Tailwind's layers, so a shorthand would also force
+   animation-play-state to running and override the pause classes. */
+.ticker-track {
+  animation-name: ticker;
+  animation-duration: 60s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }

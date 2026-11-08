@@ -11,6 +11,8 @@ const page = await context.newPage();
 const errors = []; page.on("pageerror", (e) => errors.push(String(e))); page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 const bagLabel = () => page.locator("body > header a[href='/bag']").getAttribute("aria-label");
 const subtotal = async () => rupees(await page.locator("aside dd").textContent());
+// The product page's own confirmation, next to its Add to bag button. Product cards on the page have their own.
+const pageStatus = () => page.getByRole("button", { name: "Add to bag", exact: true }).locator("xpath=following-sibling::p[@role='status']");
 
 // Product with two finishes. The expected price is read from the product page, not written into this test.
 await page.goto(`${base}/products/sample-dome-jhumka`, { waitUntil: "networkidle" });
@@ -19,10 +21,10 @@ check("empty bag shows no count", (await bagLabel()) === "Bag");
 const requests = []; page.on("request", (r) => requests.push(r.url()));
 await page.getByText("Gold tone", { exact: true }).click();
 await page.getByRole("button", { name: "Add to bag" }).click();
-check("adding confirms the piece and finish", (await page.getByRole("status").textContent()).includes("Added Dome Jhumka, Gold tone"));
+check("adding confirms the piece and finish", (await pageStatus().textContent()).includes("Added Dome Jhumka, Gold tone"));
 check("header count updates", (await bagLabel()) === "Bag, 1 item", await bagLabel());
 await page.getByText("Oxidised silver tone", { exact: true }).click();
-check("changing the finish clears the old confirmation", (await page.getByRole("status").textContent()).trim() === "");
+check("changing the finish clears the old confirmation", (await pageStatus().textContent()).trim() === "");
 await page.getByRole("button", { name: "Add to bag" }).click();
 await page.getByText("Gold tone", { exact: true }).click();
 await page.getByRole("button", { name: "Add to bag" }).click();

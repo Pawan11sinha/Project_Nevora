@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { addToBag } from "@/components/cart/bag-store";
 import { Button } from "@/components/ui/Button";
+import { ADD_RESULT_MESSAGES } from "@/lib/cart";
 import { FinishPicker } from "./FinishPicker";
-
-const messages = {
-  limit: "That's the most of this piece one bag can hold.",
-  full: "Your bag is full. Remove something to add this piece.",
-};
 
 export function AddToBag({ slug, name, finishes, soldOut }: { slug: string; name: string; finishes: string[]; soldOut?: boolean }) {
   const [finish, setFinish] = useState(finishes[0]);
@@ -17,7 +13,7 @@ export function AddToBag({ slug, name, finishes, soldOut }: { slug: string; name
 
   const add = () => {
     const result = addToBag(slug, finish);
-    setStatus(result === "added" ? { added: true, text: `Added ${name}, ${finish}.` } : { added: false, text: messages[result] });
+    setStatus(result === "added" ? { added: true, text: `Added ${name}, ${finish}.` } : { added: false, text: ADD_RESULT_MESSAGES[result] });
   };
 
   return (

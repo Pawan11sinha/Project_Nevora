@@ -4,6 +4,8 @@ import { createRequire } from "node:module";
 import { launchBrowser } from "./lib/staging-auth.mjs";
 
 const routes = process.argv.slice(2);
+// Without routes nothing would be checked, and "No violations" would be meaningless.
+if (routes.length === 0) { console.error("Usage: node scripts/a11y.mjs <route> [route...]  (no routes given, nothing checked)"); process.exit(2); }
 const base = process.env.BASE_URL ?? "http://localhost:3100";
 const axe = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const browser = await launchBrowser();

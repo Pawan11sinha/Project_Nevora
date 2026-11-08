@@ -81,5 +81,23 @@ export function resolveLines(lines: BagLine[], find: (slug: string) => Product |
   });
 }
 
+/** Messages for an add that didn't happen, shared by the product page and product cards. */
+export const ADD_RESULT_MESSAGES: Record<Exclude<AddResult, "added">, string> = {
+  limit: "That's the most of this piece one bag can hold.",
+  full: "Your bag is full. Remove something to add this piece.",
+};
+
+/**
+ * Why a product and finish can't go in the bag, or null if they can: the product must exist and be in stock, and the
+ * finish must be one of the product's own finishes. Nothing is ever added without a finish the customer chose.
+ * The same checks resolveLines applies when the bag is shown.
+ */
+export function addProblem(product: Product | undefined, finish: string | null | undefined): LineProblem | null {
+  if (!product) return "missing";
+  if (product.soldOut) return "sold-out";
+  if (!finish || !product.finishes.includes(finish)) return "finish";
+  return null;
+}
+
 /** Only available lines count towards the subtotal. */
 export const subtotalPaise = (resolved: ResolvedLine[]) => resolved.reduce((total, line) => (line.problem ? total : total + line.linePaise), 0);
