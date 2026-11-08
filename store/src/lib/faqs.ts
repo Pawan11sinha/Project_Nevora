@@ -22,8 +22,8 @@ export const FAQS: Faq[] = [
     status: "published",
     order: 1,
     answer:
-      "Add the pieces you love to your bag, then enter your delivery details at checkout. You can check out as a guest.\n\nWe don't use an online payment gateway, and you never pay on this website. After you place your order, your order page shows the exact amount with our UPI ID and QR code. Pay from your own UPI app, then enter the UPI transaction reference (UTR) on your order page. If you'd like help, you can message us on WhatsApp from the same page.\n\nYour order isn't confirmed yet at this point. We check by hand that your payment has reached our account, and then we confirm your order.",
-    source: "PROJECT_ARCHITECTURE.md checkout steps 3–5 (order saved first, order page shows amount and UPI QR and ID, UTR reference required, WhatsApp optional); IMPLEMENTATION_ROADMAP.md: prepaid manual UPI only in V1, no gateway (7 Nov 2026); guest checkout (5 Nov); payment recorded only after admin bank verification, separately from confirmation (7 Nov)",
+      "Choose the pieces you'd like, then contact us on WhatsApp. We'll reply with manual UPI payment instructions.\n\nWe don't use an online payment gateway, and there's no card or online payment on this website. Your order is confirmed only after we've checked by hand that your UPI payment has reached our account.",
+    source: "Owner's business decision restated on 8 Nov 2026: customers contact NÉVORA on WhatsApp first, then receive manual UPI payment instructions; no payment gateway. IMPLEMENTATION_ROADMAP.md: prepaid manual UPI only in V1 (7 Nov 2026); money recorded only after admin bank verification, separately from confirmation (7 Nov). The order-page and UTR steps in PROJECT_ARCHITECTURE.md aren't described here until the owner approves them (open decision 44).",
   },
   {
     id: "cod",

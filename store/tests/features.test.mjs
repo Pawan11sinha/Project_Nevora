@@ -126,11 +126,12 @@ test("FAQ answers stay true to the recorded decisions", () => {
   assert.doesNotMatch(text, /cash on delivery is available|waterproof|hypoallergenic|anti-tarnish|days? delivery|free shipping/i);
 });
 
-test("the order answer describes the manual UPI flow, with no gateway or automatic payment implied", () => {
+test("the order answer follows the owner's process: WhatsApp first, then manual UPI instructions, no gateway", () => {
   const answer = FAQS.find((f) => f.id === "place-order").answer;
-  for (const must of [/don't use an online payment gateway/, /UPI ID and QR code/, /own UPI app/, /\(UTR\)/, /WhatsApp/, /isn't confirmed yet/, /check by hand/]) assert.match(answer, must);
-  assert.doesNotMatch(answer, /pay (online|securely|instantly)|card|net ?banking|wallet|Razorpay|automatic|instant(ly)? confirm|confirmed (immediately|instantly)/i);
-  assert.match(answer, /never pay on this website/);
+  for (const must of [/contact us on WhatsApp/, /manual UPI payment instructions/, /don't use an online payment gateway/, /checked by hand/]) assert.match(answer, must);
+  assert.ok(answer.indexOf("WhatsApp") < answer.indexOf("UPI payment instructions"), "WhatsApp comes before the payment instructions");
+  // The order-page and UTR steps aren't approved for customer-facing text (open decision 44).
+  assert.doesNotMatch(answer, /UTR|transaction reference|order page|QR|pay (online|securely|instantly)|net ?banking|wallet|Razorpay|automatic|instant(ly)? confirm|confirmed (immediately|instantly)/i);
   assert.match(FAQS.find((f) => f.id === "cod").answer, /paid in advance by UPI, which we check by hand/);
 });
 

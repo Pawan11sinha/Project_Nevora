@@ -68,7 +68,7 @@ const newPage = async (options = {}) => {
   check("a question opens to show its answer", await page.getByText(/^Not at the moment\. Every order is paid in advance by UPI/).isVisible());
   await page.locator("main summary").first().click();
   const orderAnswer = await page.locator("main details").first().textContent();
-  check("the order answer describes manual UPI: no gateway, UPI ID and QR, UTR, WhatsApp help, manual check", /don't use an online payment gateway/.test(orderAnswer) && /UPI ID and QR code/.test(orderAnswer) && /\(UTR\)/.test(orderAnswer) && /WhatsApp/.test(orderAnswer) && /check by hand/.test(orderAnswer));
+  check("the order answer: WhatsApp first, then manual UPI instructions, no gateway, manual check, no order-page or UTR steps", /contact us on WhatsApp/.test(orderAnswer) && /manual UPI payment instructions/.test(orderAnswer) && /don't use an online payment gateway/.test(orderAnswer) && /checked by hand/.test(orderAnswer) && !/UTR|order page|QR/.test(orderAnswer));
   const html = await (await get("/info/faq")).text();
   check("answers are in the server HTML, so they work without JavaScript", html.includes("paid in advance by UPI") && html.includes("<details"));
   check("draft answers aren't in the HTML either", !/courier choice|open decision|supplier care guidance/i.test(html));
