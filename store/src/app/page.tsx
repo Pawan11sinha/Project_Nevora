@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { ProductGrid } from "@/components/catalogue/ProductCard";
-import { ProductImage } from "@/components/catalogue/ProductImage";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
 import { StaticHero } from "@/components/home/StaticHero";
 import { ButtonLink } from "@/components/ui/Button";
+import { EditorialImage } from "@/components/ui/EditorialImage";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { AESTHETIC_IMAGES, CATEGORY_IMAGES } from "@/lib/editorial-images";
 import { MAX_LIVE_SLIDES, SAMPLE_CAMPAIGNS } from "@/lib/sample-campaigns";
-import { COLLECTIONS, productsInCategory, productsInCollection, visibleCategories, visibleCollections } from "@/lib/sample-catalogue";
+import { COLLECTIONS, productsInCollection, visibleCategories, visibleCollections } from "@/lib/sample-catalogue";
 
 const inCollection = (slug: string) => productsInCollection(COLLECTIONS.find((c) => c.slug === slug)!);
-
-const aestheticArt = { "korean-edit": "clip", "coquette-edit": "bow", "minimal-edit": "hoop" } as const;
-const categoryArt = { jewellery: "chandbali", "hair-accessories": "claw" } as const;
 
 export default function HomePage() {
   const newArrivals = inCollection("new-arrivals").slice(0, 4);
@@ -32,19 +30,28 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-16">
           <div className="reveal">
             <SectionHeading id="categories-title" title="Shop by category" />
+            {/* Editorial photo cards. The espresso scrim covers only the lower part, where the text sits, so the text
+                keeps its contrast on light photos. Portrait on phones, so the text stays in the darkest part of the
+                scrim; landscape from tablet up. The whole card is one link to the category. */}
             <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:gap-6">
-              {categories.map((c) => (
-                <li key={c.slug}>
-                  <Link prefetch={false} href={`/categories/${c.slug}`} className="group grid grid-cols-[2fr_3fr] items-center gap-5 bg-ivory p-3 pr-5">
-                    <div className="overflow-hidden"><div className="transition-transform duration-500 ease-gentle group-hover:scale-[1.04]"><ProductImage art={categoryArt[c.slug as keyof typeof categoryArt]} alt="" sizes="(min-width: 640px) 18vw, 40vw" /></div></div>
-                    <div>
-                      <h3 className="font-serif text-heading font-medium leading-tight group-hover:underline group-hover:decoration-gold group-hover:underline-offset-4">{c.name}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-ink-soft">{c.intro}</p>
-                      <p className="mt-2 text-xs text-ink-soft">{productsInCategory(c.slug).length} sample pieces</p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+              {categories.map((c) => {
+                const image = CATEGORY_IMAGES[c.slug];
+                return (
+                  <li key={c.slug}>
+                    <Link prefetch={false} href={`/categories/${c.slug}`} className="group relative block aspect-[4/5] overflow-hidden rounded-2xl bg-espresso sm:aspect-[4/3]">
+                      {image && <EditorialImage image={image} sizes="(min-width: 1280px) 616px, (min-width: 640px) 50vw, 100vw" className="transition-transform duration-700 ease-gentle group-hover:scale-[1.03]" />}
+                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-[linear-gradient(to_top,rgb(52_37_31/0.88)_0%,rgb(52_37_31/0.62)_42%,rgb(52_37_31/0)_100%)]" />
+                      <div className="absolute inset-x-0 bottom-0 p-5 text-ivory sm:p-6 lg:p-8">
+                        <h3 className="font-serif text-heading font-medium leading-tight">{c.name}</h3>
+                        <p className="mt-1 max-w-sm text-sm leading-relaxed text-ivory/90">{c.intro}</p>
+                        <span className="mt-3 inline-flex min-h-6 items-center gap-2 text-sm font-semibold tracking-wide underline-offset-4 group-hover:underline group-hover:decoration-gold">
+                          Shop now<span aria-hidden="true" className="transition-transform duration-300 ease-gentle group-hover:translate-x-1">&rarr;</span>
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -70,18 +77,23 @@ export default function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#d9c49c]">Find your look</p>
             <h2 id="aesthetic-title" className="mt-2 font-serif text-title font-medium leading-[1.05]">Shop by aesthetic</h2>
             <div className="reveal">
-              <ul className="mt-8 grid gap-4 sm:grid-cols-3 lg:gap-6">
-                {aesthetics.map((c) => (
-                  <li key={c.slug}>
-                    <Link prefetch={false} href={`/collections/${c.slug}`} className="group grid grid-cols-[6.5rem_1fr] items-center gap-4 sm:block">
-                      <div className="overflow-hidden"><div className="transition-transform duration-500 ease-gentle group-hover:scale-[1.03]"><ProductImage art={aestheticArt[c.slug as keyof typeof aestheticArt]} alt="" sizes="(min-width: 640px) 30vw, 30vw" /></div></div>
-                      <div>
-                        <h3 className="font-serif text-heading font-medium italic group-hover:underline group-hover:decoration-gold group-hover:underline-offset-4 sm:mt-3">{c.name}</h3>
+              {/* One photo per edit, the same shape in every card: landscape when stacked on phones, portrait in three
+                  columns from tablet up. The text sits below the photo, on espresso, so it needs no scrim. */}
+              <ul className="mt-8 grid gap-8 sm:grid-cols-3 sm:gap-4 lg:gap-6">
+                {aesthetics.map((c) => {
+                  const image = AESTHETIC_IMAGES[c.slug];
+                  return (
+                    <li key={c.slug}>
+                      <Link prefetch={false} href={`/collections/${c.slug}`} className="group block">
+                        <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-espresso-deep sm:aspect-[4/5]">
+                          {image && <EditorialImage image={image} sizes="(min-width: 1280px) 400px, (min-width: 640px) 33vw, 100vw" className="transition-transform duration-700 ease-gentle group-hover:scale-[1.04]" />}
+                        </div>
+                        <h3 className="mt-4 font-serif text-heading font-medium italic group-hover:underline group-hover:decoration-gold group-hover:underline-offset-4">{c.name}</h3>
                         <p className="mt-0.5 text-sm text-[#e4dacd]">{c.intro}</p>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>

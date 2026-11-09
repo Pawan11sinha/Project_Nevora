@@ -21,7 +21,7 @@ Original failures stay on record below and in the evidence files. A later status
 | DEF-3 | Corrected findings recorded | The newest token is rejected 11 seconds after reuse is detected; the remaining gap is DEF-6 |
 | DEF-4 | Closed with qualification | Outbound connection from Analytics' `tzdata`, avoided by excluding Analytics; traffic never directly captured |
 | DEF-5 | Closed: expected behaviour | The CLI removes empty destroyed-stack folders |
-| DEF-6 | **OPEN** | After reuse is detected, the newest token still works for a short window and old access tokens still pass `getUser()` |
+| DEF-6 | **Fixed locally (8 Nov 2026); hosted verification pending** | After reuse was detected, the newest token still worked for a short window and old access tokens still passed `getUser()`. Fixed with a zero reuse interval, a trigger that ends dead sessions and a live-session check. |
 
 ## DEF-1: status command flag (fixed)
 
@@ -83,7 +83,7 @@ Original failures stay on record below and in the evidence files. A later status
 
 **Consequence:** empty stack folders can't be kept while the CLI starts other stacks. The orphan sweep's handling of other stacks wasn't read, so a `store/` stack shouldn't run alongside a throwaway one until it's checked.
 
-## DEF-6: gap after reuse detection (OPEN)
+## DEF-6: gap after reuse detection (fixed locally; hosted verification pending)
 
 **Reproduced in runs A and B:**
 
@@ -108,6 +108,41 @@ Original failures stay on record below and in the evidence files. A later status
 **Not known:** whether hosted Supabase behaves the same, how long a session revived in the window lasts, and whether Supabase regards this as a defect. Reporting it to Supabase is a separate decision, best made after a hosted check.
 
 **Must be resolved before:** real customer or admin sessions.
+
+### Root cause (investigated 8 Nov 2026, disposable local stacks, CLI 3.0.0)
+
+Reproduced with the store's settings at the time (`refresh_token_reuse_interval = 10`, `jwt_expiry = 3600`):
+- **The reuse interval causes the revival window, and more.** Supabase accepts any refresh token revoked within the last 10 seconds. Detection revokes the tokens with a fresh timestamp, so the newest token is accepted again and revives the session (part a). The same rule let a just-replaced token mint a **second active token, forking the session with no detection**: a thief racing the owner within 10 seconds is never noticed.
+- **Detection keeps the session row.** It revokes every refresh token but leaves `auth.sessions` in place, and `getUser()` and Auth's `/user` endpoint only check that the row exists. So access tokens issued before detection kept working until they expired (part b), on Auth's own endpoints too. Sign-out deletes the row, which is why it doesn't have this gap.
+- **Concurrency doesn't need the interval.** Supabase's parent rule (DEF-2: reusing the parent of the current token returns the current token) covers retries after a lost response and concurrent requests carrying one token: 6 at once all succeeded with interval 0.
+
+### Fix (in `store/`, draft; nothing hosted)
+
+| Layer | Change |
+|---|---|
+| Config | `refresh_token_reuse_interval = 0`: no forks and no revival. `jwt_expiry = 900`: an access token from an ended session is usable for at most 15 minutes anywhere the checks below don't reach. |
+| Database | `20261108220000_session_liveness.sql`: a deferred constraint trigger on `auth.refresh_tokens` deletes a session that ends a transaction with no active refresh token (what reuse detection leaves), exactly as sign-out does. Normal rotation revokes and inserts in one transaction, so it never fires. `current_session_is_live()` checks the caller's own session independently of the trigger, and the profile RLS policies require it. |
+| App | `getLiveCustomer()` (`getUser()`, then the live-session check) guards the account page and every account action. An ended session's cookies are cleared by `/auth/session-ended`, which never signs out a live session. V1 password recovery is deferred; a deliberate sign-out ends the current session. |
+
+### Evidence after the fix
+
+| Case | Before | After |
+|---|---|---|
+| Newest token immediately after detection | 200, session revived | 400 |
+| Access token issued before detection, `getUser()` | 200 | 403 |
+| Just-replaced token reused within 10 s | 200, second active token (fork) | 400, session ended |
+| Retry with the previous token (lost response) | 200 | 200 |
+| 6 concurrent refreshes with one token | 200, one token | 200, one token |
+| A token and its parent refreshed at the same moment | Forked | One active token, or the session ends; never a fork |
+
+Tests: `store/supabase/tests/session_liveness_test.sql` (17 pgTAP checks), and the DEF-6 section of `store/scripts/check-auth.mjs` through the app on the OpenNext preview: theft detected on either side, concurrent requests, three tabs, retries, replay of an older cookie, and sign-out. The earlier password-reset session-revocation test belonged to the superseded email-recovery flow and is not part of V1.
+
+### What remains
+
+- **Hosted verification:** the hosted project must use the same two settings, and it must be checked that the trigger can be created on `auth.refresh_tokens`, which Supabase owns. Locally `postgres`, which isn't a superuser there, created it. If the platform forbids it, the live-session check still protects the store's pages and customer data in RLS, but Auth's own endpoints would accept an ended session's access token for up to 15 minutes.
+- **Undetectable theft is unchanged (DEF-2):** because of the parent rule, a thief using a stolen token that's still current, or one step old, shares the session undetected. Detection only catches older tokens. Session cookies are HttpOnly and never logged; a sign-out ends the session. Password recovery remains a V2 item.
+- **Cost of interval 0:** if two requests refresh a token and its parent at the same moment, the session may end and the customer signs in again. It didn't happen in the concurrency tests, because a refreshed access token is valid for 15 minutes.
+- **Admin:** `require_admin_session()` should also require `current_session_is_live()` when C1 builds it.
 
 ## Related checks that passed in the corrected run
 

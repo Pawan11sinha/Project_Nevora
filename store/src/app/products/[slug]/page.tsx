@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/catalogue/ProductCard";
 import { PriceComparison } from "@/components/catalogue/PriceComparison";
-import { ProductImage } from "@/components/catalogue/ProductImage";
 import { AddToBag } from "@/components/product/AddToBag";
+import { ProductGallery } from "@/components/product/ProductGallery";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { FavouriteButton } from "@/components/wishlist/FavouriteButton";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { PRODUCTS, categoryOf, findProduct, formatPrice, productsInSubcategory, subcategoryName } from "@/lib/sample-catalogue";
+import { PRODUCTS, categoryOf, findProduct, formatPrice, productImages, productsInSubcategory, subcategoryName } from "@/lib/sample-catalogue";
 
 export const dynamicParams = false;
 export const generateStaticParams = () => PRODUCTS.map((p) => ({ slug: p.slug }));
@@ -37,8 +37,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     <main className="mx-auto max-w-7xl px-5 pb-6 pt-5 lg:px-8">
       <Breadcrumbs items={[{ href: "/", label: "Home" }, ...(category ? [{ href: `/categories/${category.slug}`, label: category.name }] : []), { href: category ? `/categories/${category.slug}/${product.subcategory}` : undefined, label: subcategoryName(product.subcategory) }, { label: product.name }]} />
       <div className="mt-5 grid gap-8 md:grid-cols-2 lg:gap-14">
-        <div className={product.soldOut ? "opacity-70" : ""}>
-          <ProductImage art={product.art} alt={`${product.name}, sample image`} priority sizes="(min-width: 768px) 50vw, 100vw" />
+        <div className="min-w-0">
+          <ProductGallery images={productImages(product)} name={product.name} dimmed={product.soldOut} />
         </div>
         <div className="relative md:sticky md:top-28 md:self-start">
           {/* The heart sits at the top right of this column, so the title and price lines stay together. */}

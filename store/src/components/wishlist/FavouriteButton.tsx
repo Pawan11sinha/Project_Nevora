@@ -1,6 +1,7 @@
 "use client";
 
 import { useFavourites, toggleFavourite } from "./favourites-store";
+import { isAccountIdentityTransitionPending } from "@/lib/account-identity-client";
 
 // A heart that saves or removes a product from this browser's favourites. Outline when not saved, filled espresso with a
 // thin decorative gold ring when saved, with aria-pressed so screen readers hear the state. It's a real button (Enter and Space work) and sits
@@ -15,10 +16,12 @@ export const HeartIcon = ({ filled, size = 20 }: { filled: boolean; size?: numbe
 export function FavouriteButton({ slug, name, className = "", size = "card" }: { slug: string; name: string; className?: string; size?: "card" | "page" }) {
   const favourites = useFavourites();
   const saved = favourites?.includes(slug) ?? false;
+  const switchingAccount = isAccountIdentityTransitionPending();
   const dimensions = size === "card" ? "size-11" : "size-12"; // at least 44px, the card tap-target minimum
   return (
     <button
       type="button"
+      disabled={switchingAccount}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(slug); }}
       aria-pressed={saved}
       aria-label={saved ? `Remove ${name} from favourites` : `Save ${name} to favourites`}

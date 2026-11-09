@@ -42,6 +42,7 @@ export function MobileNav({ nav }: { nav: NavData }) {
           {nav.aesthetics.length > 0 && group("Shop by Aesthetic", nav.aesthetics)}
           {nav.prices.length > 0 && group("Shop by Price", nav.prices)}
           {group("More", nav.info)}
+          <Link prefetch={false} href="/account" onClick={close} className={rowClass}>Your account</Link>
         </nav>
       </dialog>
     </div>

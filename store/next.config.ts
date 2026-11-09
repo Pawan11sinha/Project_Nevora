@@ -9,7 +9,8 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  // Google profile pictures, shown on the account page for customers who sign in with Google.
+  "img-src 'self' data: https://*.googleusercontent.com",
   "font-src 'self'",
   "connect-src 'self'",
   "frame-ancestors 'none'",

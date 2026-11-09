@@ -2,6 +2,12 @@
 // The real store reads all of this from the database. Nothing here reaches production.
 export type Art = "jhumka" | "chandbali" | "hoop" | "stud" | "necklace" | "layered" | "ring" | "bracelet" | "claw" | "clip" | "scrunchie" | "bow" | "headband";
 export type Aesthetic = "korean-edit" | "coquette-edit" | "minimal-edit";
+/** The kinds of product photo, in gallery order: front, angled or side, close-up, styled, packaging or scale. */
+export type ImageView = "main" | "angle" | "detail" | "styled" | "packaging";
+export type ExtraView = Exclude<ImageView, "main" | "detail">;
+export const IMAGE_VIEW_ORDER: ImageView[] = ["main", "angle", "detail", "styled", "packaging"];
+const VIEW_LABELS: Record<ImageView, string> = { main: "front view", angle: "side view", detail: "close-up of the detailing", styled: "styled view", packaging: "packaging and scale" };
+export type GalleryImage = { src: string; alt: string; view: ImageView };
 
 export type Product = {
   slug: string;
@@ -15,6 +21,11 @@ export type Product = {
    * In the real store this is the product's second image by sort order (product_images.sort_order = 1).
    */
   hasDetailImage: boolean;
+  /**
+   * SAMPLE: further labelled views (public/sample/<view>/<art>.svg) for the product page gallery. Most products have
+   * none, so the gallery shows one or two images; a few have more, to exercise four and five. See productImages().
+   */
+  extraViews?: ExtraView[];
   material: string;
   description: string;
   finishes: string[];
@@ -78,7 +89,7 @@ const p = (slug: string, name: string, subcategory: string, rupees: number, art:
 export const PRODUCTS: Product[] = [
   p("sample-dome-jhumka", "Dome Jhumka", "jhumkas-chandbalis", 249, "jhumka", [], { finishes: ["Oxidised silver tone", "Gold tone"], isNew: true, pickLabel: "Editor's Pick" }),
   p("sample-pearl-chandbali", "Pearl Chandbali", "jhumkas-chandbalis", 349, "chandbali", ["coquette-edit"], { isNew: true, mrpPaise: 49900 }),
-  p("sample-everyday-hoop", "Everyday Hoop", "hoops-studs", 229, "hoop", ["minimal-edit", "korean-edit"], { finishes: ["Gold tone", "Silver tone"], pickLabel: "Editor's Pick" }),
+  p("sample-everyday-hoop", "Everyday Hoop", "hoops-studs", 229, "hoop", ["minimal-edit", "korean-edit"], { finishes: ["Gold tone", "Silver tone"], pickLabel: "Editor's Pick", extraViews: ["angle", "styled", "packaging"] }),
   p("sample-pearl-stud", "Pearl Stud", "hoops-studs", 179, "stud", ["minimal-edit", "coquette-edit", "korean-edit"], { isNew: true }),
   p("sample-drop-earring", "Soft Drop Earring", "earrings", 279, "stud", ["coquette-edit"], { mrpPaise: 34900 }),
   p("sample-fine-pendant", "Fine Pendant Necklace", "necklaces", 329, "necklace", ["minimal-edit"], { isNew: true, pickLabel: "Editor's Pick" }),
@@ -88,7 +99,7 @@ export const PRODUCTS: Product[] = [
   p("sample-matte-claw", "Matte Claw Clip", "claw-clips", 169, "claw", ["minimal-edit", "korean-edit"], { finishes: ["Taupe", "Espresso", "Cream"], isNew: true, pickLabel: "Editor's Pick" }),
   p("sample-large-claw", "Large Claw Clip", "claw-clips", 199, "claw", ["minimal-edit"], { finishes: ["Taupe", "Espresso"] }),
   p("sample-pearl-clip", "Pearl Bar Clip", "korean-hair-clips", 149, "clip", ["korean-edit", "coquette-edit"], { isNew: true, mrpPaise: 14900, hasDetailImage: false }),
-  p("sample-satin-scrunchie", "Satin Scrunchie Set", "scrunchies", 169, "scrunchie", ["korean-edit"], { finishes: ["Blush", "Taupe"], mrpPaise: 19900 }),
+  p("sample-satin-scrunchie", "Satin Scrunchie Set", "scrunchies", 169, "scrunchie", ["korean-edit"], { finishes: ["Blush", "Taupe"], mrpPaise: 19900, extraViews: ["angle", "styled"] }),
   p("sample-ribbon-bow", "Ribbon Hair Bow", "hair-bows", 149, "bow", ["coquette-edit"], { pickLabel: "Editor's Pick", hasDetailImage: false }),
   p("sample-soft-headband", "Soft Padded Headband", "headbands", 199, "headband", ["korean-edit", "minimal-edit"], { mrpPaise: 20000 }),
 ];
@@ -110,6 +121,19 @@ export const productsInCategory = (slug: string) => PRODUCTS.filter((x) => categ
 export const productsInSubcategory = (slug: string) => PRODUCTS.filter((x) => x.subcategory === slug);
 export const productsInCollection = (c: Collection) => PRODUCTS.filter(c.includes);
 export const findProduct = (slug: string) => PRODUCTS.find((x) => x.slug === slug);
+
+/** Where a sample view's file lives: the main image at public/sample/<art>.svg, the others in a folder per view. */
+export const sampleImageSrc = (art: Art, view: ImageView) => (view === "main" ? `/sample/${art}.svg` : `/sample/${view}/${art}.svg`);
+
+/**
+ * A product's images in gallery order (IMAGE_VIEW_ORDER), only those that exist: nothing is repeated to fill the
+ * gallery. In the real store this is product_images ordered by sort_order, and it may be empty, in which case the
+ * gallery shows its placeholder. The second entry is also the card's hover image.
+ */
+export function productImages(product: Product): GalleryImage[] {
+  const has = new Set<ImageView>(["main", ...(product.hasDetailImage ? ["detail" as const] : []), ...(product.extraViews ?? [])]);
+  return IMAGE_VIEW_ORDER.filter((v) => has.has(v)).map((view) => ({ view, src: sampleImageSrc(product.art, view), alt: `${product.name}, sample image, ${VIEW_LABELS[view]}` }));
+}
 export const findCollection = (slug: string) => COLLECTIONS.find((c) => c.slug === slug);
 export const findCategory = (slug: string) => CATEGORIES.find((c) => c.slug === slug);
 export const categoryOf = category;

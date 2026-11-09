@@ -7,8 +7,8 @@
 
 export const NO_STORE = "no-store";
 
-/** The customer's bag, favourites and checkout, and the planned account, order, admin and API routes. Never cached. */
-export const PRIVATE_ROUTES = ["/bag", "/favourites", "/checkout", "/account", "/order", "/admin", "/api"] as const;
+/** The customer's bag, favourites, checkout, account and sign-in screens, and the planned order, admin and API routes. Never cached. */
+export const PRIVATE_ROUTES = ["/bag", "/favourites", "/checkout", "/account", "/auth", "/order", "/admin", "/api"] as const;
 
 /** The public catalogue and information pages. Pre-rendered and cacheable. "/" is the home page only. */
 export const PUBLIC_ROUTES = ["/", "/categories", "/collections", "/products", "/info", "/design"] as const;

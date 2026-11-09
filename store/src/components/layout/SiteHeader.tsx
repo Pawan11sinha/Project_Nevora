@@ -22,10 +22,11 @@ export function SiteHeader() {
           <MobileNav nav={nav} />
           <Link prefetch={false} href="/" className="justify-self-center font-serif text-[1.7rem] font-medium leading-none tracking-[0.08em] lg:order-first lg:justify-self-start">NÉVORA</Link>
           <div className="hidden justify-center lg:flex"><DesktopNav nav={nav} /></div>
-          {/* Search and account arrive with later milestones, so they're shown but disabled. */}
+          {/* Search arrives with a later milestone, so it's shown but disabled. The account link is the same for everyone,
+              so the header stays pre-rendered: /account sends signed-out visitors to sign in. */}
           <div className="flex items-center justify-end">
             <button type="button" disabled aria-label="Search, not available in this prototype" className={`${actionClass} hidden cursor-not-allowed sm:inline-flex`}><SearchIcon /></button>
-            <button type="button" disabled aria-label="Account, not available in this prototype" className={`${actionClass} hidden cursor-not-allowed sm:inline-flex`}><UserIcon /></button>
+            <Link prefetch={false} href="/account" aria-label="Your account" className="hidden size-11 items-center justify-center text-espresso hover:text-ink-soft sm:inline-flex"><UserIcon /></Link>
             <FavouritesLink className="inline-flex size-11 items-center justify-center text-espresso hover:text-ink-soft" />
             <BagLink className="-mr-2 inline-flex size-11 items-center justify-center text-espresso hover:text-ink-soft" />
           </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FavouriteButton } from "@/components/wishlist/FavouriteButton";
-import { formatPrice, type Product } from "@/lib/sample-catalogue";
+import { formatPrice, productImages, type Product } from "@/lib/sample-catalogue";
 import { CardAddToBag } from "./CardAddToBag";
 import { DiscountBadge, PriceComparison } from "./PriceComparison";
 import { ProductImage } from "./ProductImage";
@@ -12,6 +12,8 @@ import { ProductImage } from "./ProductImage";
 export function ProductCard({ product, priority = false, showLabel = true }: { product: Product; priority?: boolean; showLabel?: boolean }) {
   const label = product.soldOut ? "Sold out" : showLabel ? product.pickLabel : undefined;
   const href = `/products/${product.slug}`;
+  // The hover image is the product's second image by gallery order, as in the real store (product_images.sort_order).
+  const second = productImages(product)[1];
   return (
     <article className="group flex h-full flex-col rounded-2xl bg-[#fffdf9] p-2 shadow-[0_1px_2px_rgba(52,37,31,0.05)] ring-1 ring-line/60 transition-shadow duration-300 ease-gentle hover:shadow-[0_10px_28px_rgba(52,37,31,0.10)] sm:p-2.5">
       <div className="relative overflow-hidden rounded-xl bg-cream">
@@ -21,10 +23,10 @@ export function ProductCard({ product, priority = false, showLabel = true }: { p
             <ProductImage art={product.art} alt="" priority={priority} />
             {/* The second image fades in on hover, only on devices with a real pointer. Elsewhere it's display:none,
                 so phones never download it. Products with one image simply keep it. */}
-            {product.hasDetailImage && (
+            {second && (
               <ProductImage
                 art={product.art}
-                view="detail"
+                view={second.view}
                 alt=""
                 className="absolute inset-0 hidden h-full opacity-0 transition-opacity duration-500 ease-gentle group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:block"
               />

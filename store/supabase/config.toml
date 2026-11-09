@@ -145,13 +145,17 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# NÉVORA (8 Nov 2026): the local store runs on port 3100 (`next start`) or 8787 (OpenNext preview). Email links and
+# Google sign-in may only return to the store's own /auth routes. Hosted projects set these in the dashboard instead.
+site_url = "http://localhost:3100"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["http://localhost:3100/auth/**", "http://localhost:8787/auth/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-jwt_expiry = 3600
+# NÉVORA (DEF-6): 15 minutes, so an access token copied from a session that has since ended can be used for at most
+# 15 minutes anywhere the session check below doesn't reach. Sessions themselves last until sign-out.
+jwt_expiry = 900
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
@@ -160,7 +164,11 @@ jwt_expiry = 3600
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
-refresh_token_reuse_interval = 10
+# NÉVORA (DEF-6): 0. With the default 10 seconds, any token revoked in the last 10 seconds could still be used: a stolen
+# token could fork the session without detection, and the newest token revived a session after theft was detected.
+# Concurrent requests and retries still work with 0, through Supabase's rule that reusing the parent of the current
+# token returns the current token (tested: docs/test-evidence/LEVEL2_ISSUES.md, DEF-6). The hosted project must match.
+refresh_token_reuse_interval = 0
 # Allow/disallow new user signups to your project. Existing users can still sign in.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
@@ -168,10 +176,11 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+# NÉVORA: matches src/lib/auth/validation.ts (10+ characters with lower case, upper case and a digit).
+minimum_password_length = 10
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "lower_upper_letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -212,10 +221,10 @@ enabled = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
-# If enabled, users need to confirm their email address before signing in.
+# NÉVORA V1: email/password sign-up returns an authenticated session immediately; verification is deferred to V2.
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
@@ -232,6 +241,8 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# NÉVORA V1 does not send authentication emails. Templates under supabase/templates are retained as V2 reference assets.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -311,6 +322,17 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack_oidc`, `spotify`, `workos`, `zoom`.
+# NÉVORA V1: enable Google OAuth locally as well. Local tests supply dummy values through the process environment;
+# keep real credentials out of this file. Hosted provider configuration is managed separately.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+email_optional = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""

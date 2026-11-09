@@ -6,7 +6,7 @@ import type { Product } from "./sample-catalogue";
 export type BagLine = { slug: string; finish: string; quantity: number };
 export type LineProblem = "missing" | "sold-out" | "finish";
 export type ResolvedLine = BagLine & { key: string; product?: Product; unitPaise: number; linePaise: number; problem?: LineProblem };
-export type AddResult = "added" | "limit" | "full";
+export type AddResult = "added" | "limit" | "full" | "switching";
 
 /** A display limit for the bag only. Real stock is checked on the server at checkout. */
 export const MAX_QUANTITY = 10;
@@ -85,6 +85,7 @@ export function resolveLines(lines: BagLine[], find: (slug: string) => Product |
 export const ADD_RESULT_MESSAGES: Record<Exclude<AddResult, "added">, string> = {
   limit: "That's the most of this piece one bag can hold.",
   full: "Your bag is full. Remove something to add this piece.",
+  switching: "Your account is changing. Please try again in a moment.",
 };
 
 /**

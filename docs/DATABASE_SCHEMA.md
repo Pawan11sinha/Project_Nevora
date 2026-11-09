@@ -664,7 +664,10 @@ Written by database functions or triggers for every order status change, payment
 
 **store_settings**: single row with `whatsapp_number`, `upi_id`, `upi_payee_name`, `upi_qr_payload`, `upi_qr_payload_hash`, `upi_qr_classification`, `upi_qr_verified_at`, `dynamic_amount_enabled` (default `false`), `shipping_flat_paise`, `free_shipping_threshold_paise`, `payment_window_hours` (2), `verification_alert_hours` (24), `operational_grace_hours` (24), and the seller and grievance details shown on the site.
 
-**profiles**: `id` → `auth.users`, `full_name`, `phone`, `role` (`customer`, `admin`, default `customer`). A trigger creates the row at signup and always sets `customer`. Users can't change their own `role`, and signup metadata is never used to set it. The admin role is granted by hand with SQL.
+**profiles**: `id` → `auth.users` (`ON DELETE RESTRICT`), `full_name`, `email`, `avatar_url`, `phone`, `role` (`customer`, `admin`, default `customer`), `created_at`, `updated_at`. A trigger creates the row at signup and always sets `customer`. Users can't change their own `role`, and signup metadata is never used to set it. The admin role is granted by hand with SQL.
+- **Built ahead of C1 (8 Nov 2026, owner's approval):** draft migration `store/supabase/migrations/20261108200000_customer_profiles.sql`, run only on disposable local stacks, with pgTAP tests in `store/supabase/tests/profiles_test.sql`. C1 builds on it; the `ledger_owner` grants and admin read in the privileges table below are added there.
+- `email` is a copy of the sign-in email, kept in step by a trigger on `auth.users`. `avatar_url` is Google's profile picture, accepted only from `https://lhN.googleusercontent.com/`. `phone` is optional, 10 digits starting 6–9, collected later at checkout.
+- One auth user per email: Google and email sign-ins for the same verified address are linked by Supabase, so there's one profile.
 
 **rate_limits**: `key_hash`, `window_start`, `count`, `override_until`, `override_reason`, `override_by`. Writable only through functions.
 

@@ -109,6 +109,28 @@ Pinned versions: Next.js 16.4.5, `@opennextjs/cloudflare` 1.20.16 (which needs N
 - **CPU, under the decision rule:** 6 routes (`/`, `/checkout`, `/bag`, a product page, a category page and the 404 page), each with 1,000 requests **paced** (one at a time, 200 ms apart) and 1,000 **sustained** (5 at a time): 12,000 in total. **All 12,000 got the expected response, with 0 CPU-limit kills.** `wrangler tail` sampled 26% of paced and 4% of sustained requests, with **0 `exceededCpu` events**. Normal pages used 1–3 ms (p50), with occasional successful spikes of 10–21 ms. The 404 page, which Next.js renders on demand, was the weak spot under sustained load: p95 95 ms and a maximum of 106 ms in the sample, with no kills. The run used about 12,500–12,700 Worker requests by the scripts' count, not Cloudflare's dashboard.
 - **What this doesn't cover:** these are the current pre-rendered pages with sample data. Order saving, account and admin pages aren't built, and each needs the same 1,000-request run before launch. Workers Free is suitable for the current pages; it isn't yet established for future dynamic routes.
 
+**CPU investigation on the staging Worker (8 November 2026, version `b4bce78a`, sample data). Not a pass: the CPU acceptance criteria weren't satisfied, and they're unchanged.**
+- **Second load test (10:36–12:35 UTC):**
+  - About 19,500 requests: 6 routes, paced and sustained, plus an extra sustained homepage run, in batches of 100 with unique IDs.
+  - **Tail capture was incomplete:** 7,195 events, 21–44% per segment, with no batch fully captured. So the original criteria weren't satisfied.
+  - Among the captured events: no exceptions, no `exceededCpu`, and 32 requests over 10 ms, the highest at 15 ms.
+  - Among completed requests: no unexpected HTTP statuses and no 5xx.
+  - 10 client timeouts, all on `/collections/coquette-edit` under sustained load, while tail was losing its connection. Their cause isn't known.
+- **Cloudflare dashboard, read by the owner:**
+  - 44,090 invocations in the last 24 hours across all versions, with 0 errors.
+  - CPU over that period: P50 2.73 ms, P90 3.84 ms, P99 8.13 ms, P999 29.74 ms.
+  - At the 16:30 IST point, inside the test window: P50 2.63 ms, P90 3.65 ms, P99 9.91 ms, P999 12.25 ms.
+  - **These are aggregate dashboard readings, not complete version-specific metrics for the test window**, and not load-test evidence. The dashboard shows no maximum CPU and no per-route breakdown.
+- **Findings from the code and build:**
+  - All public pages are pre-rendered and served from OpenNext's static-assets cache.
+  - The homepage's saved output is about 292 KB, the largest; product pages are about 205 KB.
+  - Homepage CPU under sustained load varied substantially between runs: p50 11 ms in the 7 Nov run, 3 ms on 8 Nov.
+  - P999 spikes of about 85–105 ms appear in the dashboard intervals containing deployments. **Their cause is unexplained.** Startup cost, and the uncached routes the browser checks request (such as 404s) right after each deployment, are hypotheses, not proven causes.
+- **Conclusion:**
+  - No immediate optimisation or infrastructure change is required, and development continues on Workers Free.
+  - Investigate the deployment spikes during a future approved deployment.
+  - Measure Supabase-backed cache hits, misses and refreshes in Phase R (section 7, "Catalogue caching with Supabase data").
+
 **`proxy.ts`, not `middleware.ts` (decided 5 November 2026).** Next.js 16 says `middleware.ts` "is deprecated and will be removed in a future version", and Supabase's guide is built around `proxy.ts`. OpenNext warns that its Node.js proxy support is experimental, though it's merging fixes for it. So `proxy.ts` only refreshes sessions and redirects, and every page and action checks the session and role itself. If `proxy.ts` proves unreliable on Workers, the fallback must be chosen then, with evidence.
 
 ## 4. The biggest risk: 10 ms of CPU
@@ -125,7 +147,7 @@ Build one small test app and deploy it with each adapter. It uses labelled sampl
 | Cold start | Within the 1 second startup limit |
 | Worker size | Deploys on Free |
 | Pages stored as static assets | Confirm which pages avoid running the Worker at all |
-| Page caching and revalidation | Admin edit appears within the agreed time |
+| Page caching and revalidation | Admin edit appears within the agreed time. Cache hit, cache miss and refresh are measured separately (checks 1–5 in section 7, "Catalogue caching with Supabase data"). |
 | Server actions and route handlers | Work, including errors |
 | Login and `proxy.ts` | Supabase session cookies work and refresh correctly, and `proxy.ts` runs only on the protected paths |
 | Database write from the Worker | A test Postgres function runs, and two competing requests for the last unit give exactly one success |
@@ -209,7 +231,7 @@ Screenshots can be faked, so a proof is evidence for the admin and never a payme
 
 **Honest merchandising:** real stock status, real end dates, and no ratings until real reviews exist. No invented sales, popularity or urgency claims.
 
-**Customer accounts (optional):** signup with email verification, login, password reset and order history. Guest checkout never requires an account. Orders placed while logged in are linked to that account. Saved addresses and wishlist come later.
+**Customer accounts (optional):** Google OAuth or email/password signup and login, plus order history. V1 signup does not require email verification; password recovery and verification are deferred to V2. Guest checkout never requires an account. Orders placed while logged in are linked to that account. Saved addresses and wishlist come later.
 
 **Admin login:** a separate page at `/admin/login`. Being logged in as a customer gives no admin access. Every admin page, read and action needs the `admin` role, AAL2 and an active session, checked on the server and in the database.
 
@@ -261,15 +283,84 @@ Text and interactive controls use accessible contrasting colours. Animation runs
 
 **M0 Motion measurement (local build, 6 Nov 2026):** using Motion for homepage section reveals added 38.4 KB of JavaScript to the home page (138.9 to 177.3 KB, +28%), and all four sections stayed invisible when scripts failed to load, or until they arrived when delayed. A CSS-only scroll reveal replaced it, with no added JavaScript and no such failure, so Motion was removed. Browsers without CSS scroll-driven animation show the sections without the fade. Motion could be reconsidered for a later interaction, such as a cart drawer, if measured on that route.
 
+### Customer accounts (built and tested locally, 8 November 2026)
+
+Brought forward ahead of C1 and Phase D with the owner's approval. Optional: guest checkout stays. **Not usable by real customers until a hosted project is configured and DEF-6's fix is verified there** (see `SECURITY_PLAN.md`). DEF-6 is fixed locally: every account page and action uses `getLiveCustomer()` (`getUser()` plus the database's live-session check), with a zero refresh-token reuse interval, 15-minute access tokens and a trigger that ends sessions after reuse detection.
+
+| Part | How it works |
+|---|---|
+| Methods | Continue with Google (Supabase OAuth) and email with password. No mobile OTP or SMS. |
+| Where auth runs | Only on the server, through `src/lib/supabase/` (`@supabase/ssr` 0.12.7, `@supabase/supabase-js` 2.119.0, pinned). Sessions are HttpOnly, SameSite=Lax cookies, Secure on HTTPS, remembered until sign-out. There's no browser Supabase client. |
+| Settings | Server variables `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SITE_URL` (`.dev.vars` locally, Wrangler vars or secrets when deployed; never `NEXT_PUBLIC_`). The secret key isn't used. Google's client secret lives only in Supabase. |
+| Routes | `/auth/login` and `/auth/signup` are pre-rendered; their forms post to server actions. `/auth/google` starts Google sign-in with PKCE and `/auth/callback` completes it. `/account` renders per request. All are `no-store`. Verification and password-recovery routes are deferred to V2. |
+| Protection | `proxy.ts` runs only on `/account`, refreshing the session and redirecting signed-out visitors; `/account` and its actions check `getUser()` themselves, and RLS limits each customer to their own profile. `?next=` only returns to `/account`, `/bag`, `/checkout` or `/favourites`. Customer sign-in grants nothing in admin, which gets its own `/admin/login` with MFA. |
+| Accounts | V1 email/password sign-ups receive a session immediately (Confirm email off). One auth user per email: a Google sign-in with the same verified address joins the existing account. Forms never reveal whether an email has an account. Passwords need 10+ characters with upper case, lower case and a digit. |
+| Emails | V1 signup and login do not require email delivery or custom SMTP. The confirmation and recovery templates in `store/supabase/templates/` are retained as V2 reference assets. |
+
+**Future email delivery:** V2 email verification and password recovery will require an approved delivery setup. No SMTP provider or email dependency is required for V1 authentication. Order notifications remain separate from authentication email.
+
+**Tests:** `store/supabase/tests/profiles_test.sql` (pgTAP, 22 checks) and `scripts/check-auth.mjs` (browser checks against a disposable local stack, run on the OpenNext preview, so in the Worker runtime). Google was tested up to Google's sign-in page with a dummy client; a real Google sign-in needs the owner's Google OAuth client configured in Supabase. Worker CPU for `/account` and the auth routes isn't measured yet; it's part of the M8 CPU rule.
+
 ## 7. Keeping usage low
 
 ### Pages and data
 
-- **Cache public catalogue data.** Use static or cached pages for home, categories and products. KV is off until real CPU has been measured and the owner approves it. OpenNext's docs don't recommend KV for its cache, so the method is chosen in Phase R. If it's enabled, use a long `revalidate`, such as one day, plus on-demand invalidation when the admin publishes a change: a 5-minute `revalidate` on about 20 pages could need 5,760 writes a day, against KV's free limit of 1,000.
+- **Cache public catalogue data.** Use static or cached pages for home, categories and products (requirements, refresh options and checks in the next subsection). KV is off until real CPU has been measured and the owner approves it. OpenNext's docs don't recommend KV for its cache, so the method is chosen in Phase R. If it's enabled, use a long `revalidate`, such as one day, plus on-demand invalidation when the admin publishes a change: a 5-minute `revalidate` on about 20 pages could need 5,760 writes a day, against KV's free limit of 1,000.
 - **Turn off link prefetching on listing pages.** Without this, each product card can trigger an extra Worker request.
 - **Limit the session check to `/admin` and `/account`.** `proxy.ts` must not run on public storefront pages.
 - **Show stock from cached data, and check it for real only in `create_order`.** If a cached price is out of date, the server's price wins and the customer sees the change before ordering.
 - **Keep cart and checkout UI in the browser.** Call the server only when submitting.
+- **Partition browser cart and favourites by identity.** Guest data has its own local-storage namespace; signed-in data is keyed by the Supabase user ID. A client-readable, non-authorizing identity cookie selects the namespace. Guest cart transfer uses the browser Web Locks API so only one account can claim a guest snapshot; where Web Locks are unavailable, the guest snapshot stays untouched rather than being merged unsafely. Ambiguous legacy shared keys are discarded. Every auth attempt has an independent local-storage lock ID; completion or cancellation clears only that ID. BFCache restoration only signals identity subscribers and never completes a copied transition. Abandoned OAuth attempts remain hidden until their lock expires after 30 minutes.
+
+### Catalogue caching with Supabase data (requirement recorded 8 November 2026)
+
+**Requirement:** when product data moves to Supabase, the home, category, subcategory, collection (including Shop by Aesthetic) and product pages stay **pre-rendered or served from a cache**. A cached visit runs no Supabase query and no React rendering. This is a requirement, not a measured result for Supabase-backed pages, which don't exist yet.
+
+**Why:**
+- The 8 Nov staging measurements put pre-rendered pages at about 2–3 ms CPU (p50). That figure comes from an incomplete `wrangler tail` capture, alongside Cloudflare's dashboard: P99 8.13 ms over 24 hours and 0 errors in 44,090 invocations.
+- The 404 page, which Next.js renders on demand, reached p95 95 ms in the 7 Nov run, against the 10 ms Free limit.
+- Rendering catalogue pages on each visit would put every page view at that risk.
+
+**Cache hit and cache miss are separate cases:**
+
+| | Cache hit | Cache miss |
+|---|---|---|
+| Meaning | The Worker serves a stored page | No stored page exists, so the page must be built |
+| Work done | Gate, routing, reading the stored page. No Supabase query, no rendering. | Rendering, plus Supabase queries for the page's data |
+| When it happens | Almost every catalogue visit | Depends on the refresh method (below). With rebuild-on-publish, known pages are built during the build, so visitors shouldn't cause misses. With an incremental cache, the first visit after a refresh is a miss. |
+| CPU expectation | Must meet the CPU rule | Expected to be much higher than a hit. It must be measured, never assumed. It must either meet the CPU rule or be shown to be rare enough, with the owner's approval of that evidence. |
+
+**How admin product changes reach the cached pages (decision open; see open decision 45 in `IMPLEMENTATION_ROADMAP.md`):**
+- **Option A, rebuild on publish.**
+  - This extends the homepage method decided on 8 Nov, using the M3b publish pipeline. The admin saves changes, then clicks Publish, which rebuilds and redeploys the site and regenerates every catalogue page. Changes go live in about 3–5 minutes.
+  - Strengths: no runtime cache storage, and no misses from visitors.
+  - Drawbacks: every change waits for a build, and builds use GitHub Actions' Free allowance. The first requests after each deployment also need checking, because 8 Nov staging showed CPU spikes around deployments whose cause isn't known.
+- **Option B, OpenNext incremental cache with on-demand refresh.**
+  - Pages are stored in R2. The admin's save refreshes the affected pages (`revalidatePath` or `revalidateTag`), and the next visit rebuilds them.
+  - Per OpenNext's docs, on-demand refresh also needs D1 or Durable Objects. **R2 isn't approved (8 Nov)**, so this option is blocked until that changes.
+  - Pages update without a full build, but each refreshed page has a cache miss.
+- **KV stays off.** OpenNext doesn't recommend it for this cache. Enabling it needs measured CPU and the owner's approval.
+- Whichever option is chosen, the admin screen must show whether saved changes are live yet, or still waiting to be published or refreshed.
+
+**Stale cached pages must never affect money or stock:**
+- **Cached pages are for display only.** A price, sold-out state or product shown on a cached page may be out of date until the next publish or refresh.
+- **`create_order` is the authority.** Inside its transaction it reads prices, tax, stock and active status from the database. It never uses a cached page's values or an amount from the browser. If a price has changed, the customer sees the new price before the order is placed. If a product is sold out or inactive, the order is refused with a clear message.
+- **Never cached:** the bag, checkout, order, account, admin and API responses (`src/lib/cache-policy.ts`, `no-store`). The checkout total always comes from the server.
+- **Stock numbers are never shown**, so no cached page can show a wrong count. A sold-out product may still show Add to Bag until the next refresh; `create_order` refuses it.
+- Open decision 46 covers whether a sell-out or deactivation should trigger a refresh automatically, and the agreed maximum delay for display changes.
+
+**Separate CPU and performance checks.** These go in Phase R for the chosen method, and are repeated in M4 on the real store. Each is measured on its own, under the existing CPU rule, which is unchanged:
+
+| # | Check | What it shows |
+|---|---|---|
+| 1 | Product listing (category or subcategory), cache hit | Routine listing CPU, with no Supabase query |
+| 2 | Product listing, cache miss | Cost of building a listing page with Supabase data |
+| 3 | Collection page, cache hit | Routine collection CPU, including Shop by Aesthetic |
+| 4 | Collection page, cache miss | Cost of building a collection page with Supabase data |
+| 5 | Product update followed by cache refresh | Time until the change is visible; CPU of the first requests afterwards; the page shows the new data; `create_order` charges the database price throughout, including before the refresh |
+
+- Under Option A, a "miss" can only be measured as the first requests after a deployment, before any other traffic. Under Option B, a miss is forced by refreshing a page and then requesting it.
+- The 8 Nov runs showed that `wrangler tail` can't capture every request at load-test speeds. So the capture method for these checks is agreed with the owner before they run. Agreeing a method doesn't change the acceptance criteria.
 
 ### Images
 
@@ -310,7 +401,7 @@ Assumes 4 pages per visit, or 200,000 page views. These are planning estimates a
 | Supabase backups | No automatic backups on Free | Data loss risk. See `SECURITY_PLAN.md` for the recovery plan. | Pro is budgeted before public launch. Pro has daily backups kept 7 days, and our own export stays. |
 | Supabase projects | 2 active projects. Paused projects don't count. | Test plus production uses both, so a real restore test needs the test project paused. | |
 | Supabase file storage | 1 GB, and 50 MB per file | Proofs are capped by rate limits | |
-| Supabase Auth email | Refuses non-team addresses without custom SMTP. About 30 messages an hour with custom SMTP. | Signup and reset emails fail or are limited. **Customer signup needs the domain and Resend.** | If signups hit the limit, raise it in settings |
+| Supabase Auth email | V1 signup and login send no Auth email. V2 verification and recovery require a configured sender. | V2 email links are unavailable until an SMTP provider is approved and configured. | Before enabling V2 verification or recovery |
 | Resend | 100 a day, 3,000 a month, including received email. 10 requests a second. Verified domain required. | `429`, logged and retried. Daily limit resets midnight UTC. | 70 a day, or 2,100 a month |
 | GitHub | Free for private repos | Check Actions minutes for backup jobs | Rarely |
 
@@ -366,7 +457,7 @@ The store goes in `store/`, a new folder. `deploy-test/` stays as it is.
 store/src/
   app/
     (store)/            home, categories, products, cart, checkout, order, policy pages
-    (account)/          customer signup, login, password reset, /account
+    (account)/          customer signup, login, /account
     admin/              separate login and protected dashboard
     api/                only where a server action won't do
   features/

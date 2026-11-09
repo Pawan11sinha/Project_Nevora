@@ -36,7 +36,11 @@ export function HeroCarousel({ slides }: { slides: Campaign[] }) {
       <div
         id="hero-slides"
         aria-live={running ? "off" : "polite"}
-        className={enhanced ? "grid touch-pan-y select-none" : "flex snap-x snap-mandatory overflow-x-auto"}
+        // One grid in both modes: before JavaScript a single row of full-width slides you can swipe (grid-auto-flow:
+        // column), once enhanced the slides stack in the first cell. Keeping the same display, scrolling and snapping
+        // matters: switching flex to grid, or changing the scroll container, made Chrome report a layout shift of up to
+        // 0.77 (CLS) when JavaScript loaded, although nothing moved on screen. Stacked slides never overflow.
+        className={`grid auto-cols-[100%] grid-flow-col snap-x snap-mandatory overflow-x-auto ${enhanced ? "touch-pan-y select-none" : ""}`}
         onPointerDown={(e) => { if (e.isPrimary) swipe.current = { x: e.clientX, y: e.clientY }; }}
         onPointerUp={(e) => {
           const start = swipe.current;
@@ -66,7 +70,7 @@ export function HeroCarousel({ slides }: { slides: Campaign[] }) {
               inert={hidden || undefined}
               className={enhanced
                 ? `[grid-area:1/1] transition-[opacity,visibility] duration-700 ease-gentle ${active ? "visible opacity-100" : "invisible opacity-0"}`
-                : "w-full shrink-0 snap-center"}
+                : "snap-center"}
             >
               <Link
                 prefetch={false}

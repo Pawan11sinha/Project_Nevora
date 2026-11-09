@@ -173,6 +173,21 @@ async function timeToChange(page, limit) {
   await context.close();
 }
 
+// No layout shift while the page loads and the carousel takes over from the no-JavaScript row, through the first
+// automatic slide change. (Fixed 8 Nov 2026: switching the slides from a flex row to a grid scored up to 0.77.)
+for (const [width, height] of [[1440, 900], [820, 1180], [375, 812]]) {
+  for (const reducedMotion of ["no-preference", "reduce"]) {
+    const context = await browser.newContext({ viewport: { width, height }, reducedMotion });
+    await context.addInitScript(() => { window.__cls = 0; new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true }); });
+    const page = await context.newPage();
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(6500);
+    const cls = await page.evaluate(() => window.__cls);
+    check(`no layout shift on load at ${width}px, ${reducedMotion} (CLS ${cls.toFixed(4)})`, cls < 0.01);
+    await context.close();
+  }
+}
+
 check("no console or page errors", errors.length === 0, errors.slice(0, 3).join(" | ").slice(0, 300));
 await browser.close();
 process.exit(failed ? 1 : 0);

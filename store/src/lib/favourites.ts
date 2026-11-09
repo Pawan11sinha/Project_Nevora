@@ -7,7 +7,7 @@ export const MAX_FAVOURITES = 60;
 
 const SLUG = /^[a-z0-9-]{1,80}$/;
 
-export type ToggleResult = "added" | "removed" | "full";
+export type ToggleResult = "added" | "removed" | "full" | "switching";
 
 /** Reads stored favourites. Anything unreadable, unknown or duplicated is dropped, never trusted. */
 export function parseFavourites(raw: string | null): string[] {

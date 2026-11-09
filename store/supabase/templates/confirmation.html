@@ -1,0 +1,12 @@
+<!-- NÉVORA V2 reference template: V1 has no email verification. Links go to {{ .SiteURL }}/auth/confirm. The
+     server verifies the token hash there, so the link works in any browser.
+     Paste the same template into the hosted dashboard: Authentication → Email Templates → Confirm signup. -->
+<div style="background:#F8F5EF;padding:32px 16px;font-family:Helvetica,Arial,sans-serif;color:#34251F">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #ddd2c4;padding:32px">
+    <p style="margin:0 0 24px;font-family:Georgia,serif;font-size:24px;letter-spacing:4px">NÉVORA</p>
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-weight:normal;font-size:22px">Confirm your email</h1>
+    <p style="margin:0 0 24px;line-height:1.6">Thank you for creating a NÉVORA account. Confirm this email address to sign in.</p>
+    <p style="margin:0 0 24px"><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email" style="display:inline-block;background:#34251F;color:#F8F5EF;padding:12px 24px;text-decoration:none;font-weight:bold">Confirm email</a></p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#6a574c">If you didn't create an account, you can ignore this email. The link works once and expires after an hour.</p>
+  </div>
+</div>
